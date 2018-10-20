@@ -51,6 +51,26 @@ def exitError(code):
          exit(0)
      print "ERROR:", code
      exit(code)
+
+def moveBody(q_map):
+     velma.moveJoint(q_map, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(10)
+ 
+     rospy.sleep(0.5)
+     js = velma.getLastJointState()
+     if not isConfigurationClose(q_map, js[1], tolerance=0.1):
+         exitError(10)
+
+def moveHead(q_dest):
+     velma.moveHead(q_dest, 3.0, start_time=0.5)
+     if velma.waitForHead() != 0:
+         exitError(4)
+     rospy.sleep(0.5)
+     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
+         exitError(5)
  
 if __name__ == "__main__":
      # starting position
@@ -137,201 +157,77 @@ if __name__ == "__main__":
      print "To reach the goal position, some trajectory must be exetuted that contains additional, intermediate nodes"
  
      print "Moving to the right position..."
-     velma.moveJoint(q_map_right, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_right, js[1], tolerance=0.1):
-         exitError(10)
+     moveBody(q_map_right)
 
      print "moving head to position: right"
      q_dest = (-1.56, 0)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: right down"
      q_dest = (-1.56, 0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: down"
      q_dest = (0, 0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "Moving to the left position..."
-     velma.moveJoint(q_map_left, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_left, js[1], tolerance=0.1):
-         exitError(10)
+     moveBody(q_map_left)
 
      print "moving head to position: left down"
      q_dest = (1.56, 0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: left"
      q_dest = (1.56, 0)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: 0"
      q_dest = (0, 0)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "Moving to the starting position..."
-     velma.moveJoint(q_map_starting, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
-         exitError(10)
+     moveBody(q_map_starting)
 
      print "moving head to position: up"
      q_dest = (0, -0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "Moving to the right position..."
-     velma.moveJoint(q_map_right, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_right, js[1], tolerance=0.1):
-         exitError(10)
+     moveBody(q_map_right)
 
      print "moving head to position: up right"
      q_dest = (-1.56, -0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: down right"
      q_dest = (-1.56, 1.29)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: down"
      q_dest = (0, 1.29)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "Moving to the left position..."
-     velma.moveJoint(q_map_left, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_left, js[1], tolerance=0.1):
-         exitError(10)
+     moveBody(q_map_left)
 
      print "moving head to position: left down"
      q_dest = (1.56, 1.29)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "moving head to position: left up"
      q_dest = (1.56, -0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7) 
+     moveHead(q_dest)
 
      print "moving head to position: up"
      q_dest = (0, -0.7)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
+     moveHead(q_dest)
 
      print "Moving to the starting position..."
-     velma.moveJoint(q_map_starting, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
-         exitError(10) 
+     moveBody(q_map_starting) 
 
      print "moving head to position: 0"
      q_dest = (0, 0)
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(7)
- 
+     moveHead(q_dest)
+
 exitError(0)
