@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
 
 
-     print "Moving right wrist to pose defined in world frame..."
+     print "Moving right wrist to the first corner..."
      T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.5 , -0.2 , 1.3 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
          exitError(10)
  
 
-     print "Moving right wrist to pose defined in world frame..."
+     print "Moving right wrist to the second corner..."
      T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.5 , -0.4 , 1.3 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
 
-     print "Moving right wrist to pose defined in world frame..."
+     print "Moving right wrist to the third corner..."
      T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.5 , -0.4 , 1.1 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
@@ -213,7 +213,7 @@ if __name__ == "__main__":
          exitError(10)
 
 
-     print "Moving right wrist to pose defined in world frame..."
+     print "Moving right wrist to the fourth corner..."
      T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.5 , -0.2 , 1.1 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
@@ -227,7 +227,7 @@ if __name__ == "__main__":
          exitError(10)
 
 
-     print "Moving right wrist to pose defined in world frame..."
+     print "Moving right wrist back to the first corner..."
      T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.5 , -0.2 , 1.3 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
@@ -240,7 +240,7 @@ if __name__ == "__main__":
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
 
-     print "ELOELOELOELO"
+     print "MISSION ACKOMPLISHED SUCCESSFULLY!!!"
 
 
      planAndExecute(q_map_starting)
