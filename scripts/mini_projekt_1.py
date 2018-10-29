@@ -255,7 +255,7 @@ if __name__ == "__main__":
          exitError(9)"""
      print "killing Michal"
 
-     # z pliku test_cimp_imp.py :
+     # z pliku test_cimp_imp.py (linie 150-180):
      """print "Switch to cart_imp mode (no trajectory)..."
      if not velma.moveCartImpRightCurrentPos(start_time=0.2):
          exitError(10)
