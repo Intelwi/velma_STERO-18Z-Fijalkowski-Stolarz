@@ -191,7 +191,13 @@ def findPlanExecute():
 
      theta1 = math.atan2(y,x)#liczenie kata 
 
-     q_map_change['torso_0_joint'] = theta1
+     q_map_change['torso_0_joint'] = theta1 #edycja slownika
+
+def handsUp():
+     q_map_change['right_arm_0_joint'] = 1.5
+     q_map_change['right_arm_1_joint'] = -1.2
+     q_map_change['left_arm_0_joint'] = -1.5
+     q_map_change['left_arm_1_joint'] = 1.2
  
 if __name__ == "__main__":
      # starting position
@@ -213,10 +219,11 @@ if __name__ == "__main__":
          'left_arm_3_joint':-0.85, 'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
 
       # changing dictionary
-     q_map_change = {'torso_0_joint':0, 'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8,
-         'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85, 'right_arm_4_joint':0, 'right_arm_5_joint':-0.5,
-         'right_arm_6_joint':0, 'left_arm_0_joint':0.3, 'left_arm_1_joint':1.8, 'left_arm_2_joint':-1.25,
-         'left_arm_3_joint':-0.85, 'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
+     q_map_change = {'torso_0_joint':0,
+         'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8, 'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85,
+         'right_arm_4_joint':0, 'right_arm_5_joint':-0.5, 'right_arm_6_joint':0,
+         'left_arm_0_joint':0.3, 'left_arm_1_joint':1.8, 'left_arm_2_joint':-1.25, 'left_arm_3_joint':-0.85,
+         'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
  
      rospy.init_node('test_jimp')
  
@@ -283,7 +290,7 @@ if __name__ == "__main__":
          print "The action should have ended without error, but the error code is", error
          exitError(3)
  
-     #initVelma();
+     #initVelma(); #-----------------------------------------------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???????????????@@@@@@@@@@@@@@@@@
  
      #mapBuilding(); Odkrywanie otoczenia poprzez rozgladanie sie i obracanie
 
@@ -296,6 +303,10 @@ if __name__ == "__main__":
 
      findPlanExecute(); #znajdowanie puszki i obliczenie kata
      planAndExecute(q_map_change); #obracanie do puszki
+     print "ROTATION OK"
+     handsUp(); #edit joints
+     planAndExecute(q_map_change); #rece do gory
+     print "I BROKE AGAIN..."
 
      
 
