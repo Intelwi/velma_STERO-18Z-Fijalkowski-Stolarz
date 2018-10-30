@@ -72,6 +72,37 @@ def moveHead(q_dest):
      rospy.sleep(0.5)
      if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
          exitError(5)
+def initVelma():
+     print "Moving to the starting position..."
+     velma.moveJoint(q_map_starting, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(6)
+ 
+     rospy.sleep(0.5)
+     js = velma.getLastJointState()
+     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
+         exitError(10)
+
+     print "moving head to position: 0"
+     q_dest = (0,0)
+     velma.moveHead(q_dest, 1.0, start_time=0.5)
+     if velma.waitForHead() != 0:
+         exitError(4)
+     rospy.sleep(0.5)
+     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
+         exitError(5)
+
+     print "Checking if the starting configuration is as expected..."
+     rospy.sleep(0.5)
+     js = velma.getLastJointState()
+     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.3):
+         print "This test requires starting pose:"
+         print q_map_starting
+         exitError(10)
+ 
+     rospy.sleep(1.0)
 
 def mapBuilding():
      print "To reach the goal position, some trajectory must be exetuted that contains additional, intermediate nodes"
@@ -202,36 +233,7 @@ if __name__ == "__main__":
          print "The action should have ended without error, but the error code is", error
          exitError(3)
  
-     print "Moving to the starting position..."
-     velma.moveJoint(q_map_starting, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(6)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
-         exitError(10)
-
-     print "moving head to position: 0"
-     q_dest = (0,0)
-     velma.moveHead(q_dest, 1.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(4)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(5)
-
-     print "Checking if the starting configuration is as expected..."
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.3):
-         print "This test requires starting pose:"
-         print q_map_starting
-         exitError(10)
- 
-     rospy.sleep(1.0)
+     #initVelma();
  
      # mapBuilding(); Odkrywanie otoczenia poprzez rozgladanie sie i obracanie
 
@@ -249,43 +251,17 @@ if __name__ == "__main__":
 
      #velma.waitForInit()
      T_B_Jar = velma.getTf("B", "beer") #roslaunch rcprg_gazebo_utils gazebo_publish_ros_tf_object.launch link_name:=beer::link frame_id:=beer
-     if not velma.moveCartImpRight([T_B_Jar], [0.1], [PyKDL.Frame()], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(8)
+   
+     print T_B_Jar.p[2]
+     print T_B_Jar.p[1]
+     print T_B_Jar.p[0]
+
+
+
+    # if not velma.moveCartImpRight([T_B_Jar], [0.1], [PyKDL.Frame()], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         #exitError(8)
      """if velma.waitForEffectorRight() != 0:
          exitError(9)"""
-     print "killing Michal"
-
-     # z pliku test_cimp_imp.py (linie 150-180):
-     """print "Switch to cart_imp mode (no trajectory)..."
-     if not velma.moveCartImpRightCurrentPos(start_time=0.2):
-         exitError(10)
-     if velma.waitForEffectorRight() != 0:
-         exitError(11)
- 
-     rospy.sleep(0.5)
- 
-     diag = velma.getCoreCsDiag()
-     if not diag.inStateCartImp():
-         print "The core_cs should be in cart_imp state, but it is not"
-         exitError(12)
- 
-     print "To see the tool frame add 'tf' in rviz and enable 'right_arm_tool' frame."
-     print "At every state switch to cart_imp, the tool frames are reset."
-     print "Also, the tool impedance parameters are reset to 1500N/m in every"\
-         " direction for linear stiffness and to 150Nm/rad in every direction for angular"\
-         " stiffness, i.e. (1500,1500,1500,150,150,150)."
- 
-     print "Moving right wrist to pose defined in world frame..."
-     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
-     if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(13)
-     if velma.waitForEffectorRight() != 0:
-         exitError(14)
-     rospy.sleep(0.5)
-     print "Calculating difference between desiread and reached pose..."
-     T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-     print T_B_T_diff
-     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-         exitError(15)"""
+    
 
      exitError(0)
