@@ -45,7 +45,13 @@ from rcprg_planner import *
 #from velma_common.velma_interface import *
 from control_msgs.msg import FollowJointTrajectoryResult
 from rcprg_ros_utils import exitError
- 
+
+# wspolrzedne puszki
+x_p=0
+y_p=0
+z_p=0
+theta1=0
+
 def exitError(code):
      if code == 0:
          print "OK"
@@ -185,11 +191,11 @@ def findPlanExecute():
      #velma.waitForInit()
      T_B_Jar = velma.getTf("B", "beer") #roslaunch rcprg_gazebo_utils gazebo_publish_ros_tf_object.launch link_name:=beer::link frame_id:=beer
    
-     z = T_B_Jar.p[2]#z
-     y = T_B_Jar.p[1]#y
-     x = T_B_Jar.p[0]#x
+     z_p = T_B_Jar.p[2]#z
+     y_p = T_B_Jar.p[1]#y
+     x_p = T_B_Jar.p[0]#x
 
-     theta1 = math.atan2(y,x)#liczenie kata 
+     theta1 = math.atan2(y_p,x_p)#liczenie kata 
 
      q_map_change['torso_0_joint'] = theta1 #edycja slownika
 
@@ -198,6 +204,31 @@ def handsUp():
      q_map_change['right_arm_1_joint'] = -1.2
      q_map_change['left_arm_0_joint'] = -1.5
      q_map_change['left_arm_1_joint'] = 1.2
+
+def toCart():
+     print "Switch to cart_imp mode (no trajectory)..."
+     if not velma.moveCartImpRightCurrentPos(start_time=0.2):
+         exitError(8)
+     if velma.waitForEffectorRight() != 0:
+         exitError(9)
+ 
+     rospy.sleep(0.5)
+
+def movingInCart(x, y, z):
+     print "Moving right wrist to the fourth corner..."
+     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( x , y , z ))
+     if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(8)
+     if velma.waitForEffectorRight() != 0:
+         exitError(9)
+     rospy.sleep(0.5)
+     print "calculating difference between desiread and reached pose..."
+     T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
+     print T_B_T_diff
+     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+         exitError(10)
+
+#-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
      # starting position
@@ -306,9 +337,29 @@ if __name__ == "__main__":
      print "ROTATION OK"
      handsUp(); #edit joints
      planAndExecute(q_map_change); #rece do gory
-     print "I BROKE AGAIN..."
+     print "RECE W GORZE"
 
-     
+     toCart();
+
+     #movingInCart(x_p, y_p, z_p)
+
+     print "Rotating right writs by 45 deg around local x axis (right-hand side matrix multiplication)"
+     T_B_Tr = velma.getTf("B", "Tr")
+     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotX(45.0/180.0*math.pi))
+     if not velma.moveCartImpRight([T_B_Trd], [2.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(16)
+     if velma.waitForEffectorRight() != 0:
+         exitError(17)
+     rospy.sleep(0.5)
+
+     print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
+     T_B_Tr = velma.getTf("B", "Tr")
+     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotZ(theta1))
+     if not velma.moveCartImpRight([T_B_Trd], [2.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(16)
+     if velma.waitForEffectorRight() != 0:
+         exitError(17)
+     rospy.sleep(0.5)     
 
 
     # if not velma.moveCartImpRight([T_B_Jar], [0.1], [PyKDL.Frame()], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
