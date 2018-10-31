@@ -194,10 +194,15 @@ def findPlanExecute():
      z_p = T_B_Jar.p[2]#z
      y_p = T_B_Jar.p[1]#y
      x_p = T_B_Jar.p[0]#x
+     print T_B_Jar
+
 
      theta1 = math.atan2(y_p,x_p)#liczenie kata 
 
      q_map_change['torso_0_joint'] = theta1 #edycja slownika
+     handsUp(); #edit joints
+
+     return x_p, y_p, z_p
 
 def handsUp():
      q_map_change['right_arm_0_joint'] = 1.5
@@ -216,7 +221,7 @@ def toCart():
 
 def movingInCart(x, y, z):
      print "Moving right wrist to the fourth corner..."
-     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( x , y , z ))
+     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector(x, y, z))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(8)
      if velma.waitForEffectorRight() != 0:
@@ -332,27 +337,36 @@ if __name__ == "__main__":
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
 
-    # findPlanExecute(); #znajdowanie puszki i obliczenie kata
-    # planAndExecute(q_map_change); #obracanie do puszki
+     (x,y,z)=findPlanExecute(); #znajdowanie puszki i obliczenie kata
+     planAndExecute(q_map_change); #obracanie torsu do puszki i podnoszenie rak
      print "ROTATION OK"
-     #handsUp(); #edit joints
-     #planAndExecute(q_map_change); #rece do gory
      print "RECE W GORZE"
 
      toCart();
 
      #movingInCart(x_p, y_p, z_p)
-     
+     x_p=x
+     y_p=y
+     z_p=z
 
      Wo_B = velma.getTf("Wo", "B") #pozycja bazy wzgledem swiata
      rot = Wo_B.M #pobranie macierzy rotacji
-     B_T = PyKDL.Frame(Wo_B,PyKDL.Vector(x_p,y_p,z_p)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-     
+     print x_p
+     print y_p
+     print z_p
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p, y_p, z_p+0.5)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+
+     print "Zaczynam ruch nadgarstka"
      if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(16)
      if velma.waitForEffectorRight() != 0:
          exitError(17)
      rospy.sleep(0.5)
+     print "calculating difference between desiread and reached pose..."
+     T_B_T_diff = PyKDL.diff(B_T, velma.getTf("B", "Tr"), 1.0)
+     print T_B_T_diff
+     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+         exitError(10)
 
      """print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
      T_B_Tr = velma.getTf("B", "Tr")
