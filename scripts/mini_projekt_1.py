@@ -332,34 +332,62 @@ if __name__ == "__main__":
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
 
-     findPlanExecute(); #znajdowanie puszki i obliczenie kata
-     planAndExecute(q_map_change); #obracanie do puszki
+    # findPlanExecute(); #znajdowanie puszki i obliczenie kata
+    # planAndExecute(q_map_change); #obracanie do puszki
      print "ROTATION OK"
-     handsUp(); #edit joints
-     planAndExecute(q_map_change); #rece do gory
+     #handsUp(); #edit joints
+     #planAndExecute(q_map_change); #rece do gory
      print "RECE W GORZE"
 
      toCart();
 
      #movingInCart(x_p, y_p, z_p)
+     
 
-     print "Rotating right writs by 45 deg around local x axis (right-hand side matrix multiplication)"
-     T_B_Tr = velma.getTf("B", "Tr")
-     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotX(45.0/180.0*math.pi))
-     if not velma.moveCartImpRight([T_B_Trd], [2.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+     Wo_B = velma.getTf("Wo", "B") #pozycja bazy wzgledem swiata
+     rot = Wo_B.M #pobranie macierzy rotacji
+     B_T = PyKDL.Frame(Wo_B,PyKDL.Vector(x_p,y_p,z_p)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     
+     if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(16)
      if velma.waitForEffectorRight() != 0:
          exitError(17)
      rospy.sleep(0.5)
 
-     print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
+     """print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
      T_B_Tr = velma.getTf("B", "Tr")
-     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotZ(theta1))
-     if not velma.moveCartImpRight([T_B_Trd], [2.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotZ(45.0/180.0*math.pi))
+     if not velma.moveCartImpRight([T_B_Trd, T_B_Tr], [2.0, 4.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(16)
      if velma.waitForEffectorRight() != 0:
          exitError(17)
-     rospy.sleep(0.5)     
+     rospy.sleep(0.5)
+
+     print "Finished wrist move" 
+
+     print "Moving the right tool and equilibrium pose from 'wrist' to 'grip' frame..."
+     T_B_Wr = velma.getTf("B", "Wr")
+     T_Wr_Gr = velma.getTf("Wr", "Gr")
+     if not velma.moveCartImpRight([T_B_Wr*T_Wr_Gr], [0.1], [T_Wr_Gr], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(18)
+     if velma.waitForEffectorRight() != 0:
+         exitError(19)    
+
+     print "Finished tool change"
+
+     print "the right tool is now in 'grip' pose"
+     rospy.sleep(0.5)
+ 
+     print "Rotating right equilibrium pose by -45 deg around local x axis (right-hand side matrix multiplication)"
+     T_B_Tr = velma.getTf("B", "Tr")
+     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotX(-45.0/180.0*math.pi))
+     if not velma.moveCartImpRight([T_B_Trd, T_B_Tr], [2.0, 4.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(20)
+     if velma.waitForEffectorRight() != 0:
+         exitError(21)
+     rospy.sleep(0.5)"""
+
+     print "Finished rotating"
 
 
     # if not velma.moveCartImpRight([T_B_Jar], [0.1], [PyKDL.Frame()], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
