@@ -209,6 +209,7 @@ def handsUp():
      q_map_change['right_arm_1_joint'] = -1.2
      q_map_change['left_arm_0_joint'] = -1.5
      q_map_change['left_arm_1_joint'] = 1.2
+     q_map_change['right_arm_3_joint'] = 1.3 # test to grab!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!nmaaaaaaaaaaaaaaanmannananamnnamn
 
 def toCart():
      print "Switch to cart_imp mode (no trajectory)..."
@@ -342,9 +343,8 @@ if __name__ == "__main__":
      print "ROTATION OK"
      print "RECE W GORZE"
 
-     toCart();
+     toCart(); #przejscie do trybu cart_imp
 
-     #movingInCart(x_p, y_p, z_p)
      x_p=x
      y_p=y
      z_p=z
@@ -354,7 +354,7 @@ if __name__ == "__main__":
      print x_p
      print y_p
      print z_p
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p, y_p, z_p+0.5)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.3, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 
      print "Zaczynam ruch nadgarstka"
      if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
