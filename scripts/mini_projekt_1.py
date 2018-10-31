@@ -209,7 +209,8 @@ def handsUp():
      q_map_change['right_arm_1_joint'] = -1.2
      q_map_change['left_arm_0_joint'] = -1.5
      q_map_change['left_arm_1_joint'] = 1.2
-     q_map_change['right_arm_3_joint'] = 1.3 # test to grab!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!nmaaaaaaaaaaaaaaanmannananamnnamn
+     q_map_change['right_arm_3_joint'] = 1.8 # test to grab!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!nmaaaaaaaaaaaaaaanmannananamnnamn
+     rospy.sleep(2)
 
 def toCart():
      print "Switch to cart_imp mode (no trajectory)..."
@@ -234,6 +235,41 @@ def movingInCart(x, y, z):
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
 
+def grabBeer():
+     print "reset left"
+     velma.resetHandLeft()
+     if velma.waitForHandLeft() != 0:
+         exitError(2)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
+         exitError(3)
+ 
+     print "reset right"
+     velma.resetHandRight()
+     if velma.waitForHandRight() != 0:
+         exitError(4)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), [0,0,0,0]):
+         exitError(5)
+ 
+     dest_q = [90.0/180.0*math.pi,0,0,0]
+     print "move left:", dest_q
+     velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     if velma.waitForHandLeft() != 0:
+         exitError(6)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), dest_q):
+         print velma.getHandLeftCurrentConfiguration(), dest_q
+         exitError(7)
+ 
+     dest_q = [90.0/180.0*math.pi,0,0,0]
+     print "move right:", dest_q
+     velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     if velma.waitForHandRight() != 0:
+         exitError(8)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), dest_q):
+         exitError(9)
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
@@ -367,6 +403,16 @@ if __name__ == "__main__":
      print T_B_T_diff
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
+
+
+     print "Switch to jnt_imp mode (no trajectory)..."
+     velma.moveJointImpToCurrentPos(start_time=0.5)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(3)
+
+     grabBeer();
 
      """print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
      T_B_Tr = velma.getTf("B", "Tr")
