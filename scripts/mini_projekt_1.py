@@ -39,12 +39,46 @@ import rospy
 import math
 import PyKDL
 import copy
+from threading import Thread
  
 from velma_common import *
 from rcprg_planner import *
 #from velma_common.velma_interface import *
 from control_msgs.msg import FollowJointTrajectoryResult
-from rcprg_ros_utils import exitError
+from rcprg_ros_utils import MarkerPublisher, exitError
+
+from moveit_msgs.msg import AttachedCollisionObject, CollisionObject
+from shape_msgs.msg import SolidPrimitive
+from geometry_msgs.msg import Pose
+from visualization_msgs.msg import Marker
+import tf_conversions.posemath as pm
+ 
+class MarkerPublisherThread:
+    def threaded_function(self, obj):
+        pub = MarkerPublisher("attached_objects")
+        while not self.stop_thread:
+            pub.publishSinglePointMarker(PyKDL.Vector(), 1, r=1, g=0, b=0, a=1, namespace='default', frame_id=obj.link_name, m_type=Marker.CYLINDER, scale=Vector3(0.02, 0.02, 1.0), T=pm.fromMsg(obj.object.primitive_poses[0]))
+            try:
+                rospy.sleep(0.1)
+            except:
+                break
+ 
+        try:
+            pub.eraseMarkers(0, 10, namespace='default')
+            rospy.sleep(0.5)
+        except:
+            pass
+ 
+    def __init__(self, obj):
+        self.thread = Thread(target = self.threaded_function, args = (obj, ))
+
+    def start(self):
+        self.stop_thread = False
+        self.thread.start()
+
+    def stop(self):
+        self.stop_thread = True
+        self.thread.join()
 
 # wspolrzedne puszki
 x_p=0
@@ -107,6 +141,22 @@ def initVelma():
          print "This test requires starting pose:"
          print q_map_starting
          exitError(10)
+
+     print "reset left"
+     velma.resetHandLeft()
+     if velma.waitForHandLeft() != 0:
+         exitError(2)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
+         exitError(3)
+ 
+     print "reset right"
+     velma.resetHandRight()
+     if velma.waitForHandRight() != 0:
+         exitError(4)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), [0,0,0,0]):
+         exitError(5)
  
      rospy.sleep(1.0)
 
@@ -187,30 +237,33 @@ def mapBuilding():
      q_dest = (0, 0)
      moveHead(q_dest)
 
-def findPlanExecute():
+def findObject(object): #trzeba poprawic by zawsze sie obracal
      #velma.waitForInit()
-     T_B_Jar = velma.getTf("B", "beer") #roslaunch rcprg_gazebo_utils gazebo_publish_ros_tf_object.launch link_name:=beer::link frame_id:=beer
+     T_B_Jar = velma.getTf("B", object) #odebranie pozycji i orientacji obiektu
    
-     z_p = T_B_Jar.p[2]#z
-     y_p = T_B_Jar.p[1]#y
-     x_p = T_B_Jar.p[0]#x
-     print T_B_Jar
+     z = T_B_Jar.p[2]#z
+     y = T_B_Jar.p[1]#y
+     x = T_B_Jar.p[0]#x
+
+     theta = math.atan2(y,x)
+     if theta>1.55:
+	theta = 1.55
+     if theta<-1.55:
+	theta = -1.55
+
+     return x,y,z,theta
 
 
-     theta1 = math.atan2(y_p,x_p)#liczenie kata 
-
-     q_map_change['torso_0_joint'] = theta1 #edycja slownika
+def findPlanExecute():
+     [x_p,y_p,z_p,theta] = findObject("beer") #edycja slownika
+     q_map_change['torso_0_joint'] = theta
      handsUp(); #edit joints
-
      return x_p, y_p, z_p
 
 def handsUp():
-     q_map_change['right_arm_0_joint'] = 1.5
+     q_map_change['right_arm_0_joint'] = 1
      q_map_change['right_arm_1_joint'] = -1.2
-     q_map_change['left_arm_0_joint'] = -1.5
-     q_map_change['left_arm_1_joint'] = 1.2
-     q_map_change['right_arm_3_joint'] = 1.8 # test to grab!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!nmaaaaaaaaaaaaaaanmannananamnnamn
-     rospy.sleep(2)
+     q_map_change['right_arm_3_joint'] = 2
 
 def toCart():
      print "Switch to cart_imp mode (no trajectory)..."
@@ -218,58 +271,56 @@ def toCart():
          exitError(8)
      if velma.waitForEffectorRight() != 0:
          exitError(9)
- 
      rospy.sleep(0.5)
 
-def movingInCart(x, y, z):
-     print "Moving right wrist to the fourth corner..."
-     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector(x, y, z))
-     if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(8)
-     if velma.waitForEffectorRight() != 0:
-         exitError(9)
-     rospy.sleep(0.5)
-     print "calculating difference between desiread and reached pose..."
-     T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-     print T_B_T_diff
-     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-         exitError(10)
+def gripper_action(gripper,action):
+     if gripper == "left":	
+     	if action == "grab":
+     		dest_q = [90.0/180.0*math.pi,90.0/180.0*math.pi,90.0/180.0*math.pi,0]
+     		print "move left:", dest_q
+     		velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     		
+     	elif action == "drop":
+     		dest_q = [0,0,0,0]
+     		print "move left:", dest_q
+     		velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+	else:
+		return
+     	rospy.sleep(1)
+     elif gripper == "right":	
+     	if action == "grab":
+     		dest_q = [90.0/180.0*math.pi,90.0/180.0*math.pi,90.0/180.0*math.pi,0]
+     		print "move right:", dest_q
+     		velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     		
+     	elif action == "drop":
+     		dest_q = [0,0,0,0]
+     		print "move right:", dest_q
+     		velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+	else:
+		return
+     	rospy.sleep(1)
+     else:
+     	return
 
-def grabBeer():
-     print "reset left"
-     velma.resetHandLeft()
-     if velma.waitForHandLeft() != 0:
-         exitError(2)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
-         exitError(3)
- 
-     print "reset right"
-     velma.resetHandRight()
-     if velma.waitForHandRight() != 0:
-         exitError(4)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), [0,0,0,0]):
-         exitError(5)
- 
-     dest_q = [90.0/180.0*math.pi,0,0,0]
-     print "move left:", dest_q
-     velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
-     if velma.waitForHandLeft() != 0:
-         exitError(6)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), dest_q):
-         print velma.getHandLeftCurrentConfiguration(), dest_q
-         exitError(7)
- 
-     dest_q = [90.0/180.0*math.pi,0,0,0]
-     print "move right:", dest_q
-     velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
-     if velma.waitForHandRight() != 0:
-         exitError(8)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), dest_q):
-         exitError(9)
+def writeJointStateToQMAP(q_map_change,actual_joints):
+     q_map_change['torso_0_joint'] = actual_joints[1]['torso_0_joint']
+     q_map_change['right_arm_0_joint'] = actual_joints[1]['right_arm_0_joint']
+     q_map_change['right_arm_1_joint'] = actual_joints[1]['right_arm_1_joint']
+     q_map_change['right_arm_2_joint'] = actual_joints[1]['right_arm_2_joint']
+     q_map_change['right_arm_3_joint'] = actual_joints[1]['right_arm_3_joint']
+     q_map_change['right_arm_4_joint'] = actual_joints[1]['right_arm_4_joint']
+     q_map_change['right_arm_5_joint'] = actual_joints[1]['right_arm_5_joint']
+     q_map_change['right_arm_6_joint'] = actual_joints[1]['right_arm_6_joint']
+     q_map_change['left_arm_0_joint'] = actual_joints[1]['left_arm_0_joint']
+     q_map_change['left_arm_1_joint'] = actual_joints[1]['left_arm_1_joint']
+     q_map_change['left_arm_2_joint'] = actual_joints[1]['left_arm_2_joint']
+     q_map_change['left_arm_3_joint'] = actual_joints[1]['left_arm_3_joint']
+     q_map_change['left_arm_4_joint'] = actual_joints[1]['left_arm_4_joint']
+     q_map_change['left_arm_5_joint'] = actual_joints[1]['left_arm_5_joint']
+     q_map_change['left_arm_6_joint'] = actual_joints[1]['left_arm_6_joint']
+     return q_map_change
+
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
@@ -390,7 +441,21 @@ if __name__ == "__main__":
      print x_p
      print y_p
      print z_p
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.3, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.35, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+
+     print "Zaczynam ruch nadgarstka"
+     if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(16)
+     if velma.waitForEffectorRight() != 0:
+         exitError(17)
+     rospy.sleep(0.5)
+     print "calculating difference between desiread and reached pose..."
+     T_B_T_diff = PyKDL.diff(B_T, velma.getTf("B", "Tr"), 1.0)
+     print T_B_T_diff
+     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+         exitError(10)
+
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.25, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 
      print "Zaczynam ruch nadgarstka"
      if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
@@ -412,48 +477,52 @@ if __name__ == "__main__":
          print "The action should have ended without error, but the error code is", error
          exitError(3)
 
-     grabBeer();
+     gripper_action("right","grab"); #zlapanie piwka
 
-     """print "Rotating right writs by 45 deg around local z axis (right-hand side matrix multiplication)"
-     T_B_Tr = velma.getTf("B", "Tr")
-     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotZ(45.0/180.0*math.pi))
-     if not velma.moveCartImpRight([T_B_Trd, T_B_Tr], [2.0, 4.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(16)
-     if velma.waitForEffectorRight() != 0:
-         exitError(17)
-     rospy.sleep(0.5)
 
-     print "Finished wrist move" 
-
-     print "Moving the right tool and equilibrium pose from 'wrist' to 'grip' frame..."
-     T_B_Wr = velma.getTf("B", "Wr")
-     T_Wr_Gr = velma.getTf("Wr", "Gr")
-     if not velma.moveCartImpRight([T_B_Wr*T_Wr_Gr], [0.1], [T_Wr_Gr], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(18)
-     if velma.waitForEffectorRight() != 0:
-         exitError(19)    
-
-     print "Finished tool change"
-
-     print "the right tool is now in 'grip' pose"
-     rospy.sleep(0.5)
+     print "Creating a virtual object attached to gripper..."
+     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
+     object1 = AttachedCollisionObject()
+     object1.link_name = "right_HandGripLink"
+     object1.object.header.frame_id = "right_HandGripLink"
+     object1.object.id = "object1"
+     object1_prim = SolidPrimitive()
+     object1_prim.type = SolidPrimitive.CYLINDER
+     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 1.0
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.02
+     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
+     object1.object.primitives.append(object1_prim)
+     object1.object.primitive_poses.append(object1_pose)
+     object1.object.operation = CollisionObject.ADD
+     object1.touch_links = ['right_HandPalmLink',
+         'right_HandFingerOneKnuckleOneLink',
+         'right_HandFingerOneKnuckleTwoLink',
+         'right_HandFingerOneKnuckleThreeLink',
+         'right_HandFingerTwoKnuckleOneLink',
+         'right_HandFingerTwoKnuckleTwoLink',
+         'right_HandFingerTwoKnuckleThreeLink',
+         'right_HandFingerThreeKnuckleTwoLink',
+         'right_HandFingerThreeKnuckleThreeLink']
  
-     print "Rotating right equilibrium pose by -45 deg around local x axis (right-hand side matrix multiplication)"
-     T_B_Tr = velma.getTf("B", "Tr")
-     T_B_Trd = T_B_Tr * PyKDL.Frame(PyKDL.Rotation.RotX(-45.0/180.0*math.pi))
-     if not velma.moveCartImpRight([T_B_Trd, T_B_Tr], [2.0, 4.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(20)
-     if velma.waitForEffectorRight() != 0:
-         exitError(21)
-     rospy.sleep(0.5)"""
-
-     print "Finished rotating"
+     print "Publishing the attached object marker on topic /attached_objects"
+     pub = MarkerPublisherThread(object1)
+     pub.start()
 
 
-    # if not velma.moveCartImpRight([T_B_Jar], [0.1], [PyKDL.Frame()], [0.1], None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         #exitError(8)
-     """if velma.waitForEffectorRight() != 0:
-         exitError(9)"""
-    
+     actual_joints = velma.getLastJointState() #pobranie czasu i aktualnej pozycji stawow
+     q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
+
+     [x,y,z,theta] = findObject("cafe_table") #znalezenie stolika do kawy
+     print "Kat do stolika od kawy "
+     print theta
+     
+     q_map_change['right_arm_0_joint'] = q_map_change['right_arm_0_joint']+0.3 
+     planAndExecute(q_map_change); #podniesienie piwa
+     q_map_change['torso_0_joint'] = theta
+     planAndExecute(q_map_change); #ruch do stolika do kawy
+     gripper_action("right","drop"); #puszczenie piwka
+
+     pub.stop()
 
      exitError(0)
