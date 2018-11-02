@@ -416,7 +416,7 @@ if __name__ == "__main__":
  
      #initVelma(); #-----------------------------------------------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???????????????@@@@@@@@@@@@@@@@@
  
-     #mapBuilding(); Odkrywanie otoczenia poprzez rozgladanie sie i obracanie
+     #mapBuilding(); #Odkrywanie otoczenia poprzez rozgladanie sie i obracanie
 
 
      # Uwzglednianie mapy
@@ -424,14 +424,17 @@ if __name__ == "__main__":
      rospy.sleep(1.0)
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
-
+     
+     gripper_action("right","grab"); #chowamy paluszki
+     gripper_action("left","grab"); #chowamy paluszki
      (x,y,z)=findPlanExecute(); #znajdowanie puszki i obliczenie kata
      planAndExecute(q_map_change); #obracanie torsu do puszki i podnoszenie rak
      print "ROTATION OK"
      print "RECE W GORZE"
-
+    
+     gripper_action("right","drop"); #wystawiamy paluszki
+     
      toCart(); #przejscie do trybu cart_imp
-
      x_p=x
      y_p=y
      z_p=z
