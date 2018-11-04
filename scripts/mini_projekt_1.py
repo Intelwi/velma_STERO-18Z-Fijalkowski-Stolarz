@@ -273,10 +273,18 @@ def toCart():
          exitError(9)
      rospy.sleep(0.5)
 
+def toJnp():
+     print "Switch to jnt_imp mode (no trajectory)..."
+     velma.moveJointImpToCurrentPos(start_time=0.5)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(3)
+
 def gripper_action(gripper,action):
      if gripper == "left":	
      	if action == "grab":
-     		dest_q = [90.0/180.0*math.pi,90.0/180.0*math.pi,90.0/180.0*math.pi,0]
+     		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
      		print "move left:", dest_q
      		velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
      		
@@ -289,7 +297,7 @@ def gripper_action(gripper,action):
      	rospy.sleep(1)
      elif gripper == "right":	
      	if action == "grab":
-     		dest_q = [90.0/180.0*math.pi,90.0/180.0*math.pi,90.0/180.0*math.pi,0]
+     		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
      		print "move right:", dest_q
      		velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
      		
@@ -321,6 +329,18 @@ def writeJointStateToQMAP(q_map_change,actual_joints):
      q_map_change['left_arm_6_joint'] = actual_joints[1]['left_arm_6_joint']
      return q_map_change
 
+def moveCart(B_T):
+     print "Zaczynam ruch nadgarstka"
+     if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
+         exitError(16)
+     if velma.waitForEffectorRight() != 0:
+         exitError(17)
+     rospy.sleep(0.5)
+     print "calculating difference between desiread and reached pose..."
+     T_B_T_diff = PyKDL.diff(B_T, velma.getTf("B", "Tr"), 1.0)
+     print T_B_T_diff
+     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+         exitError(10)
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
@@ -407,12 +427,7 @@ if __name__ == "__main__":
          print "Motors must be homed and ready to use for this test."
          exitError(1)
  
-     print "Switch to jnt_imp mode (no trajectory)..."
-     velma.moveJointImpToCurrentPos(start_time=0.5)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(3)
+     toJnp(); #ruch w przestrzeni satwow
  
      #initVelma(); #-----------------------------------------------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???????????????@@@@@@@@@@@@@@@@@
  
@@ -433,58 +448,34 @@ if __name__ == "__main__":
      print "RECE W GORZE"
     
      gripper_action("right","drop"); #wystawiamy paluszki
-     
      toCart(); #przejscie do trybu cart_imp
      x_p=x
      y_p=y
      z_p=z
-
      [x,y,z,theta] = findObject("beer") 
      rot = PyKDL.Rotation.RPY(0, 0, theta)
+
+     x_new = x_p-0.25 #przysuniecie chwytaka do puszki
+     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.3)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     moveCart(B_T); #ruch chwytakiem
+     actual_joints = velma.getLastJointState() #zapamietanie czasu i aktualnej pozycji stawow
+     q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
 
      x_new = x_p-0.35 #ustawienie chwytaka w odstepie od puszki
      y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-
-     print "Zaczynam ruch nadgarstka"
-     if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(16)
-     if velma.waitForEffectorRight() != 0:
-         exitError(17)
-     rospy.sleep(0.5)
-     print "calculating difference between desiread and reached pose..."
-     T_B_T_diff = PyKDL.diff(B_T, velma.getTf("B", "Tr"), 1.0)
-     print T_B_T_diff
-     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-         exitError(10)
+     moveCart(B_T); #ruch chwytakiem
 
      x_new = x_p-0.25 #przysuniecie chwytaka do puszki
      y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-
-     print "Zaczynam ruch nadgarstka"
-     if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
-         exitError(16)
-     if velma.waitForEffectorRight() != 0:
-         exitError(17)
-     rospy.sleep(0.5)
-     print "calculating difference between desiread and reached pose..."
-     T_B_T_diff = PyKDL.diff(B_T, velma.getTf("B", "Tr"), 1.0)
-     print T_B_T_diff
-     if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-         exitError(10)
-
-
-     print "Switch to jnt_imp mode (no trajectory)..."
-     velma.moveJointImpToCurrentPos(start_time=0.5)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(3)
-
+     moveCart(B_T); #ruch chwytakiem
+     
+     toJnp(); #ruch w przestrzeni stawow
      gripper_action("right","grab"); #zlapanie piwka
 
-
+     # ruch z planowaniem i chwyconym piwem  
      print "Creating a virtual object attached to gripper..."
      # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
      object1 = AttachedCollisionObject()
@@ -514,20 +505,20 @@ if __name__ == "__main__":
      pub = MarkerPublisherThread(object1)
      pub.start()
 
-
-     actual_joints = velma.getLastJointState() #pobranie czasu i aktualnej pozycji stawow
-     q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
-
      [x,y,z,theta] = findObject("cafe_table") #znalezenie stolika do kawy
      print "Kat do stolika od kawy "
      print theta
      
-     q_map_change['right_arm_0_joint'] = q_map_change['right_arm_0_joint']+0.3 
      planAndExecute(q_map_change); #podniesienie piwa
      q_map_change['torso_0_joint'] = theta
      planAndExecute(q_map_change); #ruch do stolika do kawy
      gripper_action("right","drop"); #puszczenie piwka
 
      pub.stop()
+
+     gripper_action("right","grab"); #chowamy paluszki
+     q_map1 = q_map_starting
+     q_map1['torso_0_joint'] = theta
+     planAndExecute(q_map1)
 
      exitError(0)
