@@ -255,7 +255,7 @@ def findObject(object): #trzeba poprawic by zawsze sie obracal
 
 
 def findPlanExecute():
-     [x_p,y_p,z_p,theta] = findObject("beer") #edycja slownika
+     [x_p,y_p,z_p,theta] = findObject("beer") #znalezienie piwa
      q_map_change['torso_0_joint'] = theta
      handsUp(); #edit joints
      return x_p, y_p, z_p
@@ -439,12 +439,12 @@ if __name__ == "__main__":
      y_p=y
      z_p=z
 
-     Wo_B = velma.getTf("Wo", "B") #pozycja bazy wzgledem swiata
-     rot = Wo_B.M #pobranie macierzy rotacji
-     print x_p
-     print y_p
-     print z_p
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.35, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     [x,y,z,theta] = findObject("beer") 
+     rot = PyKDL.Rotation.RPY(0, 0, theta)
+
+     x_new = x_p-0.35 #ustawienie chwytaka w odstepie od puszki
+     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 
      print "Zaczynam ruch nadgarstka"
      if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
@@ -458,7 +458,9 @@ if __name__ == "__main__":
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
 
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_p-0.25, y_p, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     x_new = x_p-0.25 #przysuniecie chwytaka do puszki
+     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 
      print "Zaczynam ruch nadgarstka"
      if not velma.moveCartImpRight([B_T], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
