@@ -52,6 +52,11 @@ from shape_msgs.msg import SolidPrimitive
 from geometry_msgs.msg import Pose
 from visualization_msgs.msg import Marker
 import tf_conversions.posemath as pm
+
+D1 = 0.35
+D2 = 0.25
+R=0.913/2
+H=0.82
  
 class MarkerPublisherThread:
     def threaded_function(self, obj):
@@ -246,19 +251,18 @@ def findObject(object): #trzeba poprawic by zawsze sie obracal
      x = T_B_Jar.p[0]#x
 
      theta = math.atan2(y,x)
-     if theta>1.55:
-	theta = 1.55
-     if theta<-1.55:
-	theta = -1.55
 
      return x,y,z,theta
 
 
-def findPlanExecute():
-     [x_p,y_p,z_p,theta] = findObject("beer") #znalezienie piwa
-     q_map_change['torso_0_joint'] = theta
-     handsUp(); #edit joints
-     return x_p, y_p, z_p
+def planTorsoAngle(theta):
+     if theta>1.55:
+	thetaT = 1.55
+     elif theta<-1.55:
+	thetaT = -1.55
+     else:
+        thetaT = theta
+     q_map_change['torso_0_joint'] = thetaT
 
 def handsUp():
      q_map_change['right_arm_0_joint'] = 1
@@ -344,6 +348,7 @@ def moveCart(B_T):
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
+
      # starting position
      q_map_starting = {'torso_0_joint':0, 'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8,
          'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85, 'right_arm_4_joint':0, 'right_arm_5_joint':-0.5,
@@ -439,41 +444,50 @@ if __name__ == "__main__":
      rospy.sleep(1.0)
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
-     
+
      gripper_action("right","grab"); #chowamy paluszki
      gripper_action("left","grab"); #chowamy paluszki
-     (x,y,z)=findPlanExecute(); #znajdowanie puszki i obliczenie kata
+     [x_p,y_p,z_p,theta] = findObject("beer") # znajdowanie puszki
+     planTorsoAngle(theta); #obliczenie kata
+     handsUp(); #edit joints
      planAndExecute(q_map_change); #obracanie torsu do puszki i podnoszenie rak
      print "ROTATION OK"
      print "RECE W GORZE"
-    
+
      gripper_action("right","drop"); #wystawiamy paluszki
      toCart(); #przejscie do trybu cart_imp
-     x_p=x
-     y_p=y
-     z_p=z
-     [x,y,z,theta] = findObject("beer") 
-     rot = PyKDL.Rotation.RPY(0, 0, theta)
 
-     x_new = x_p-0.25 #przysuniecie chwytaka do puszki
-     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
+     rot = PyKDL.Rotation.RPY(0, 0, theta)
+     
+     help = math.sqrt((y_p/x_p)*(y_p/x_p)+1)
+     if x_p<0:
+     	x_new = x_p+D1/help #ustawienie chwytaka w odstepie od puszki
+     else :
+     	x_new = x_p-D1/help #ustawienie chwytaka w odstepie od puszki  
+     y_new = (y_p/x_p)*x_new #rownanie prostej
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     moveCart(B_T); #ruch chwytakiem
+
+     if x_p<0:
+     	x_new = x_p+D2/help #ustawienie chwytaka w odstepie od puszki
+     	
+     else :
+     	x_new = x_p-D2/help #ustawienie chwytaka w odstepie od puszki
+     y_new = (y_p/x_p)*x_new #rownanie prostej
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     moveCart(B_T); #ruch chwytakiem
+
+     toJnp(); #ruch w przestrzeni stawow
+     gripper_action("right","grab"); #zlapanie piwka
+
+     toCart(); #przejscie do trybu cart_imp
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.3)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
+
+     toJnp(); #ruch w przestrzeni stawow
      actual_joints = velma.getLastJointState() #zapamietanie czasu i aktualnej pozycji stawow
      q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
 
-     x_new = x_p-0.35 #ustawienie chwytaka w odstepie od puszki
-     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-     moveCart(B_T); #ruch chwytakiem
-
-     x_new = x_p-0.25 #przysuniecie chwytaka do puszki
-     y_new = ((0-y_p)/(0-x_p))*x_new #rownanie prostej
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-     moveCart(B_T); #ruch chwytakiem
-     
-     toJnp(); #ruch w przestrzeni stawow
-     gripper_action("right","grab"); #zlapanie piwka
 
      # ruch z planowaniem i chwyconym piwem  
      print "Creating a virtual object attached to gripper..."
@@ -505,20 +519,36 @@ if __name__ == "__main__":
      pub = MarkerPublisherThread(object1)
      pub.start()
 
-     [x,y,z,theta] = findObject("cafe_table") #znalezenie stolika do kawy
+     [x_c,y_c,z_c,theta] = findObject("cafe_table") #znalezenie stolika do kawy
+     planTorsoAngle(theta); #znajdowanie puszki i obliczenie kata
      print "Kat do stolika od kawy "
      print theta
      
-     planAndExecute(q_map_change); #podniesienie piwa
-     q_map_change['torso_0_joint'] = theta
      planAndExecute(q_map_change); #ruch do stolika do kawy
-     gripper_action("right","drop"); #puszczenie piwka
+
+     toCart()
+     rot = PyKDL.Rotation.RPY(0, 0, theta)
+     help = math.sqrt(math.pow(y_c/x_c,2)+1)
+     if x_c < 0:
+     	x_new = x_c + R/help #przysuniecie chwytaka do puszki
+     else :
+     	x_new = x_c - R/help #przysuniecie chwytaka do puszki
+     
+     y_new = (y_c/x_c)*x_new #rownanie prostej
+     z_new = H + 0.4
+
+     print (x_c, y_c, z_c)
+     print (x_new, y_new, z_new, R/help)
+     
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new, y_new, z_new)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     moveCart(B_T); #ruch chwytakiem
 
      pub.stop()
 
+     toJnp()
+     gripper_action("right","drop"); #puszczenie piwka
      gripper_action("right","grab"); #chowamy paluszki
      q_map1 = q_map_starting
-     q_map1['torso_0_joint'] = theta
      planAndExecute(q_map1)
 
      exitError(0)
