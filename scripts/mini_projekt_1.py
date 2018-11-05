@@ -285,30 +285,65 @@ def toJnp():
          print "The action should have ended without error, but the error code is", error
          exitError(3)
 
-def gripper_action(gripper,action):
+def checkLeft(dest_q,isBeer):
+    	if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), dest_q):
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        		print "Beer is grabbed!"
+        	else:	
+        		print velma.getHandLeftCurrentConfiguration(), dest_q
+  			exitError(7)
+        else:
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        		exitError("Beer is not grabbed!")
+
+def checkRight(dest_q,isBeer):
+    	if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), dest_q):
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        		print "Beer is grabbed!"
+        	else:	
+        		print velma.getHandLeftCurrentConfiguration(), dest_q
+  			exitError(9)
+        else:
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        		exitError("Beer is not grabbed!")
+
+def left_gripper_action(dest_q,isBeer):
+     	print "move left:", dest_q
+     	velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     	if velma.waitForHandLeft() != 0:
+        	exitError(6)
+      	rospy.sleep(0.5)
+    	checkLeft(dest_q,isBeer)
+
+def right_gripper_action(dest_q,isBeer):
+     	print "move right:", dest_q
+     	velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     	if velma.waitForHandRight() != 0:
+        	exitError(6)
+      	rospy.sleep(0.5)
+     	checkRight(dest_q,isBeer)
+
+
+def gripper_action(gripper,action,isBeer):
      if gripper == "left":	
      	if action == "grab":
      		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
-     		print "move left:", dest_q
-     		velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
-     		
+     		left_gripper_action(dest_q,isBeer)
      	elif action == "drop":
      		dest_q = [0,0,0,0]
-     		print "move left:", dest_q
-     		velma.moveHandLeft(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     		left_gripper_action(dest_q,isBeer)
 	else:
 		return
      	rospy.sleep(1)
+     
      elif gripper == "right":	
      	if action == "grab":
      		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
-     		print "move right:", dest_q
-     		velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     		right_gripper_action(dest_q,isBeer)
      		
      	elif action == "drop":
      		dest_q = [0,0,0,0]
-     		print "move right:", dest_q
-     		velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     		right_gripper_action(dest_q,isBeer)
 	else:
 		return
      	rospy.sleep(1)
@@ -445,8 +480,8 @@ if __name__ == "__main__":
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
 
-     gripper_action("right","grab"); #chowamy paluszki
-     gripper_action("left","grab"); #chowamy paluszki
+     gripper_action("right","grab",0); #chowamy paluszki
+     gripper_action("left","grab",0); #chowamy paluszki
      [x_p,y_p,z_p,theta] = findObject("beer") # znajdowanie puszki
      planTorsoAngle(theta); #obliczenie kata
      handsUp(); #edit joints
@@ -454,7 +489,7 @@ if __name__ == "__main__":
      print "ROTATION OK"
      print "RECE W GORZE"
 
-     gripper_action("right","drop"); #wystawiamy paluszki
+     gripper_action("right","drop",0); #wystawiamy paluszki
      toCart(); #przejscie do trybu cart_imp
 
      rot = PyKDL.Rotation.RPY(0, 0, theta)
@@ -478,13 +513,14 @@ if __name__ == "__main__":
      moveCart(B_T); #ruch chwytakiem
 
      toJnp(); #ruch w przestrzeni stawow
-     gripper_action("right","grab"); #zlapanie piwka
+     gripper_action("right","grab",1); #zlapanie piwka i sprawdzenie czy chwycone
 
      toCart(); #przejscie do trybu cart_imp
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.3)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
 
      toJnp(); #ruch w przestrzeni stawow
+     checkRight([80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0],1) #zlapanie piwka i sprawdzanie czy chwycone
      actual_joints = velma.getLastJointState() #zapamietanie czasu i aktualnej pozycji stawow
      q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
 
@@ -546,8 +582,8 @@ if __name__ == "__main__":
      pub.stop()
 
      toJnp()
-     gripper_action("right","drop"); #puszczenie piwka
-     gripper_action("right","grab"); #chowamy paluszki
+     gripper_action("right","drop",1); #puszczenie piwka
+     gripper_action("right","grab",0); #chowamy paluszki
      q_map1 = q_map_starting
      planAndExecute(q_map1)
 
