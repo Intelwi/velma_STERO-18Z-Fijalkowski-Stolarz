@@ -293,7 +293,8 @@ def checkLeft(dest_q,isBeer):
         		print velma.getHandLeftCurrentConfiguration(), dest_q
   			exitError(7)
         else:
-        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:
+       			planAndExecute(q_map_starting)	
         		exitError("Beer is not grabbed!")
 
 def checkRight(dest_q,isBeer):
@@ -304,7 +305,8 @@ def checkRight(dest_q,isBeer):
         		print velma.getHandLeftCurrentConfiguration(), dest_q
   			exitError(9)
         else:
-        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:	
+        	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:
+        		planAndExecute(q_map_starting)	
         		exitError("Beer is not grabbed!")
 
 def left_gripper_action(dest_q,isBeer):
@@ -380,6 +382,62 @@ def moveCart(B_T):
      print T_B_T_diff
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
+
+def virtualObjectRightHand():
+     print "Creating a virtual object attached to gripper..."
+     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
+     object1 = AttachedCollisionObject()
+     object1.link_name = "right_HandGripLink"
+     object1.object.header.frame_id = "right_HandGripLink"
+     object1.object.id = "object1"
+     object1_prim = SolidPrimitive()
+     object1_prim.type = SolidPrimitive.CYLINDER
+     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
+     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
+     object1.object.primitives.append(object1_prim)
+     object1.object.primitive_poses.append(object1_pose)
+     object1.object.operation = CollisionObject.ADD
+     object1.touch_links = ['right_HandPalmLink',
+         'right_HandFingerOneKnuckleOneLink',
+         'right_HandFingerOneKnuckleTwoLink',
+         'right_HandFingerOneKnuckleThreeLink',
+         'right_HandFingerTwoKnuckleOneLink',
+         'right_HandFingerTwoKnuckleTwoLink',
+         'right_HandFingerTwoKnuckleThreeLink',
+         'right_HandFingerThreeKnuckleTwoLink',
+         'right_HandFingerThreeKnuckleThreeLink']
+     return object1
+
+def virtualObjectLeftHand():
+     print "Creating a virtual object attached to gripper..."
+     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
+     object1 = AttachedCollisionObject()
+     object1.link_name = "left_HandGripLink"
+     object1.object.header.frame_id = "left_HandGripLink"
+     object1.object.id = "object1"
+     object1_prim = SolidPrimitive()
+     object1_prim.type = SolidPrimitive.CYLINDER
+     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
+     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
+     object1.object.primitives.append(object1_prim)
+     object1.object.primitive_poses.append(object1_pose)
+     object1.object.operation = CollisionObject.ADD
+     object1.touch_links = ['left_HandPalmLink',
+         'left_HandFingerOneKnuckleOneLink',
+         'left_HandFingerOneKnuckleTwoLink',
+         'left_HandFingerOneKnuckleThreeLink',
+         'left_HandFingerTwoKnuckleOneLink',
+         'left_HandFingerTwoKnuckleTwoLink',
+         'left_HandFingerTwoKnuckleThreeLink',
+         'left_HandFingerThreeKnuckleTwoLink',
+         'left_HandFingerThreeKnuckleThreeLink']
+     return object1
+
+
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
@@ -441,7 +499,7 @@ if __name__ == "__main__":
          print "Planning motion to the goal position using set of all joints..."
          print "Moving to valid position, using planned trajectory."
          goal_constraint = qMapToConstraints(q_dest, 0.01, group=velma.getJointGroup("impedance_joints"))
-         for i in range(20):
+         for i in range(10):
              rospy.sleep(0.5)
              js = velma.getLastJointState()
              print "Planning (try", i, ")..."
@@ -459,7 +517,7 @@ if __name__ == "__main__":
          rospy.sleep(0.5)
          js = velma.getLastJointState()
          if not isConfigurationClose(q_dest, js[1]):
-             exitError(6)
+             exitError("THE PLANNING HAS FAILED. PLEASE RESET THE ENVIRONMENT")
 
 
      diag = velma.getCoreCsDiag()
@@ -469,31 +527,33 @@ if __name__ == "__main__":
  
      toJnp(); #ruch w przestrzeni satwow
  
-     #initVelma(); #-----------------------------------------------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???????????????@@@@@@@@@@@@@@@@@
+     #initVelma(); #przejscie do pozycji poczatkowej
  
      #mapBuilding(); #Odkrywanie otoczenia poprzez rozgladanie sie i obracanie
 
 
-     # Uwzglednianie mapy
+     """Uwzglednianie mapy"""
      oml = OctomapListener("/octomap_binary")
      rospy.sleep(1.0)
      octomap = oml.getOctomap(timeout_s=5.0)
      p.processWorld(octomap)
+     print "Uwzglednianie mapy"
 
+
+     """podniesienie reki i obrocenie sie do stolika z piwem"""
      gripper_action("right","grab",0); #chowamy paluszki
      gripper_action("left","grab",0); #chowamy paluszki
      [x_p,y_p,z_p,theta] = findObject("beer") # znajdowanie puszki
      planTorsoAngle(theta); #obliczenie kata
      handsUp(); #edit joints
      planAndExecute(q_map_change); #obracanie torsu do puszki i podnoszenie rak
-     print "ROTATION OK"
-     print "RECE W GORZE"
-
      gripper_action("right","drop",0); #wystawiamy paluszki
      toCart(); #przejscie do trybu cart_imp
-
-     rot = PyKDL.Rotation.RPY(0, 0, theta)
+     print "podniesienie reki i obrocenie sie do stolika z piwem"
      
+
+     """ustawienie chwytaka w odleglosci do puszki"""
+     rot = PyKDL.Rotation.RPY(0, 0, theta)
      help = math.sqrt((y_p/x_p)*(y_p/x_p)+1)
      if x_p<0:
      	x_new = x_p+D1/help #ustawienie chwytaka w odstepie od puszki
@@ -502,89 +562,105 @@ if __name__ == "__main__":
      y_new = (y_p/x_p)*x_new #rownanie prostej
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
+     print "ustawienie chwytaka w odleglosci do puszki"
 
+
+     """ustawienie chwytaka w blizej puszki"""
      if x_p<0:
-     	x_new = x_p+D2/help #ustawienie chwytaka w odstepie od puszki
-     	
+     	x_new = x_p+D2/help #ustawienie chwytaka w odstepie od puszki	
      else :
      	x_new = x_p-D2/help #ustawienie chwytaka w odstepie od puszki
      y_new = (y_p/x_p)*x_new #rownanie prostej
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.1)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
+     print "ustawienie chwytaka w blizej puszki"
 
+
+     """zlapanie piwka i sprawdzenie czy chwycone"""
      toJnp(); #ruch w przestrzeni stawow
-     gripper_action("right","grab",1); #zlapanie piwka i sprawdzenie czy chwycone
+     gripper_action("right","grab",1);
+     print "zlapanie piwka i sprawdzenie czy chwycone"
 
+
+     """Podniesienie puszki"""
      toCart(); #przejscie do trybu cart_imp
-     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.3)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z_p+0.5)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
+     print "Podniesienie puszki"
 
-     toJnp(); #ruch w przestrzeni stawow
+
+     """Sprawdzenie czy chwycone"""
+     toJnp();
      checkRight([80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0],1) #zlapanie piwka i sprawdzanie czy chwycone
      actual_joints = velma.getLastJointState() #zapamietanie czasu i aktualnej pozycji stawow
      q_map_change = writeJointStateToQMAP(q_map_change,actual_joints) #wyluskanie pozycji stawow
+     print "Sprawdzenie czy chwycone"
 
 
-     # ruch z planowaniem i chwyconym piwem  
-     print "Creating a virtual object attached to gripper..."
-     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
-     object1 = AttachedCollisionObject()
-     object1.link_name = "right_HandGripLink"
-     object1.object.header.frame_id = "right_HandGripLink"
-     object1.object.id = "object1"
-     object1_prim = SolidPrimitive()
-     object1_prim.type = SolidPrimitive.CYLINDER
-     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 1.0
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.02
-     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
-     object1.object.primitives.append(object1_prim)
-     object1.object.primitive_poses.append(object1_pose)
-     object1.object.operation = CollisionObject.ADD
-     object1.touch_links = ['right_HandPalmLink',
-         'right_HandFingerOneKnuckleOneLink',
-         'right_HandFingerOneKnuckleTwoLink',
-         'right_HandFingerOneKnuckleThreeLink',
-         'right_HandFingerTwoKnuckleOneLink',
-         'right_HandFingerTwoKnuckleTwoLink',
-         'right_HandFingerTwoKnuckleThreeLink',
-         'right_HandFingerThreeKnuckleTwoLink',
-         'right_HandFingerThreeKnuckleThreeLink']
- 
+     """Tworzenie wirtualnego obiektu i ustawinie katow w stawach"""       
+     object1 = virtualObjectRightHand() #tworzenie wirtualnego obiektu
      print "Publishing the attached object marker on topic /attached_objects"
      pub = MarkerPublisherThread(object1)
      pub.start()
-
      [x_c,y_c,z_c,theta] = findObject("cafe_table") #znalezenie stolika do kawy
      planTorsoAngle(theta); #znajdowanie puszki i obliczenie kata
-     print "Kat do stolika od kawy "
-     print theta
+     print "Tworzenie wirtualnego obiektu i ustawinie katow w stawach"
      
-     planAndExecute(q_map_change); #ruch do stolika do kawy
 
+     """Planowanie z piwem w reku"""
+     print "Planning motion to the goal position using set of all joints..."
+     print "Moving to valid position, using planned trajectory."
+     goal_constraint_1 = qMapToConstraints(q_map_change, 0.01, group=velma.getJointGroup("impedance_joints"))
+     for i in range(10):
+         rospy.sleep(0.5)
+         js = velma.getLastJointState()
+         print "Planning (try", i, ")..."
+         traj = p.plan(js[1], [goal_constraint_1], "impedance_joints", max_velocity_scaling_factor=0.06, planner_id="RRTConnect", attached_collision_objects=[object1])
+         if traj == None:
+             continue
+         print "Executing trajectory..."
+         if not velma.moveJointTraj(traj, start_time=0.5):
+             exitError(5)
+         if velma.waitForJoint() == 0:
+             break
+         else:
+             print "The trajectory could not be completed, retrying..."
+             continue
+     rospy.sleep(0.5)
+     js = velma.getLastJointState()
+     if not isConfigurationClose(q_map_change, js[1]):
+         exitError("THE PLANNING HAS FAILED. PLEASE RESET THE ENVIRONMENT")
+     rospy.sleep(1.0)
+     print "Planowanie z piwem w reku"
+
+
+     """Przesuniecie chwytaka z piwem nad drugi stolik"""
      toCart()
      rot = PyKDL.Rotation.RPY(0, 0, theta)
      help = math.sqrt(math.pow(y_c/x_c,2)+1)
      if x_c < 0:
-     	x_new = x_c + R/help #przysuniecie chwytaka do puszki
+     	x_new = x_c + R/help
      else :
-     	x_new = x_c - R/help #przysuniecie chwytaka do puszki
-     
-     y_new = (y_c/x_c)*x_new #rownanie prostej
+     	x_new = x_c - R/help
+     y_new = (y_c/x_c)*x_new
      z_new = H + 0.4
-
-     print (x_c, y_c, z_c)
-     print (x_new, y_new, z_new, R/help)
-     
      B_T = PyKDL.Frame(rot, PyKDL.Vector(x_new, y_new, z_new)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
      moveCart(B_T); #ruch chwytakiem
+     print "Przesuniecie chwytaka z piwem nad drugi stolik"
+
 
      pub.stop()
 
+
+     """Puszczenie piwka"""
      toJnp()
      gripper_action("right","drop",1); #puszczenie piwka
      gripper_action("right","grab",0); #chowamy paluszki
-     q_map1 = q_map_starting
-     planAndExecute(q_map1)
+     print "Puszczenie piwka"
+
+
+     """Powrot do pozycji poczatkowej"""
+     planAndExecute(q_map_starting)
+     print "Powrot do pozycji poczatkowej"
 
      exitError(0)
