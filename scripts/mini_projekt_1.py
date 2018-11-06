@@ -294,8 +294,9 @@ def checkLeft(dest_q,isBeer):
   			exitError(7)
         else:
         	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:
+       			print "Beer is not grabbed! Going back to starting position."
        			planAndExecute(q_map_starting)	
-        		exitError("Beer is not grabbed!")
+        		exitError("Task execution failed. Came back to starting position correctly.")
 
 def checkRight(dest_q,isBeer):
     	if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), dest_q):
@@ -306,8 +307,9 @@ def checkRight(dest_q,isBeer):
   			exitError(9)
         else:
         	if dest_q == [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0] and isBeer==1:
-        		planAndExecute(q_map_starting)	
-        		exitError("Beer is not grabbed!")
+       			print "Beer is not grabbed! Going back to starting position."
+       			planAndExecute(q_map_starting)	
+        		exitError("Task execution failed. Came back to starting position correctly.")
 
 def left_gripper_action(dest_q,isBeer):
      	print "move left:", dest_q
