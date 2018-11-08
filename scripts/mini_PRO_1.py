@@ -1,38 +1,5 @@
 #!/usr/bin/env python
  
- 
- 
- # Copyright (c) 2017, Robot Control and Pattern Recognition Group,
- # Institute of Control and Computation Engineering
- # Warsaw University of Technology
- #
- # All rights reserved.
- # 
- # Redistribution and use in source and binary forms, with or without
- # modification, are permitted provided that the following conditions are met:
- #     * Redistributions of source code must retain the above copyright
- #       notice, this list of conditions and the following disclaimer.
- #     * Redistributions in binary form must reproduce the above copyright
- #       notice, this list of conditions and the following disclaimer in the
- #       documentation and/or other materials provided with the distribution.
- #     * Neither the name of the Warsaw University of Technology nor the
- #       names of its contributors may be used to endorse or promote products
- #       derived from this software without specific prior written permission.
- # 
- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- # DISCLAIMED. IN NO EVENT SHALL <COPYright HOLDER> BE LIABLE FOR ANY
- # DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- # LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- #
- # Author: Dawid Seredynski
- #
- 
 import roslib; roslib.load_manifest('velma_task_cs_ros_interface')
  
 import rospy
@@ -53,10 +20,8 @@ from geometry_msgs.msg import Pose
 from visualization_msgs.msg import Marker
 import tf_conversions.posemath as pm
 
-D1 = 0.35
-D2 = 0.25
-R=0.913/2
-H=0.82
+from constants import *
+# from functions import *
  
 class MarkerPublisherThread:
     def threaded_function(self, obj):
@@ -85,12 +50,6 @@ class MarkerPublisherThread:
         self.stop_thread = True
         self.thread.join()
 
-# wspolrzedne puszki
-x_p=0
-y_p=0
-z_p=0
-theta1=0
-
 def exitError(code):
      if code == 0:
          print "OK"
@@ -98,25 +57,6 @@ def exitError(code):
      print "ERROR:", code
      exit(code)
 
-def moveBody(q_map):
-     velma.moveJoint(q_map, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(10)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map, js[1], tolerance=0.1):
-         exitError(10)
-
-def moveHead(q_dest):
-     velma.moveHead(q_dest, 3.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(4)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(5)
 def initVelma():
      print "Moving to the starting position..."
      velma.moveJoint(q_map_starting, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
@@ -164,6 +104,99 @@ def initVelma():
          exitError(5)
  
      rospy.sleep(1.0)
+
+def toCart():
+     print "Switch to cart_imp mode (no trajectory)..."
+     if not velma.moveCartImpRightCurrentPos(start_time=0.2):
+         exitError(8)
+     if velma.waitForEffectorRight() != 0:
+         exitError(9)
+     rospy.sleep(0.5)
+
+def toJnp():
+     print "Switch to jnt_imp mode (no trajectory)..."
+     velma.moveJointImpToCurrentPos(start_time=0.5)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(3)
+
+def virtualObjectRightHand():
+     print "Creating a virtual object attached to gripper..."
+     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
+     object1 = AttachedCollisionObject()
+     object1.link_name = "right_HandGripLink"
+     object1.object.header.frame_id = "right_HandGripLink"
+     object1.object.id = "object1"
+     object1_prim = SolidPrimitive()
+     object1_prim.type = SolidPrimitive.CYLINDER
+     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
+     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
+     object1.object.primitives.append(object1_prim)
+     object1.object.primitive_poses.append(object1_pose)
+     object1.object.operation = CollisionObject.ADD
+     object1.touch_links = ['right_HandPalmLink',
+         'right_HandFingerOneKnuckleOneLink',
+         'right_HandFingerOneKnuckleTwoLink',
+         'right_HandFingerOneKnuckleThreeLink',
+         'right_HandFingerTwoKnuckleOneLink',
+         'right_HandFingerTwoKnuckleTwoLink',
+         'right_HandFingerTwoKnuckleThreeLink',
+         'right_HandFingerThreeKnuckleTwoLink',
+         'right_HandFingerThreeKnuckleThreeLink']
+     return object1
+
+'''def virtualObjectLeftHand():
+     print "Creating a virtual object attached to gripper..."
+     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
+     object1 = AttachedCollisionObject()
+     object1.link_name = "left_HandGripLink"
+     object1.object.header.frame_id = "left_HandGripLink"
+     object1.object.id = "object1"
+     object1_prim = SolidPrimitive()
+     object1_prim.type = SolidPrimitive.CYLINDER
+     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
+     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
+     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
+     object1.object.primitives.append(object1_prim)
+     object1.object.primitive_poses.append(object1_pose)
+     object1.object.operation = CollisionObject.ADD
+     object1.touch_links = ['left_HandPalmLink',
+         'left_HandFingerOneKnuckleOneLink',
+         'left_HandFingerOneKnuckleTwoLink',
+         'left_HandFingerOneKnuckleThreeLink',
+         'left_HandFingerTwoKnuckleOneLink',
+         'left_HandFingerTwoKnuckleTwoLink',
+         'left_HandFingerTwoKnuckleThreeLink',
+         'left_HandFingerThreeKnuckleTwoLink',
+         'left_HandFingerThreeKnuckleThreeLink']
+     return object1'''
+
+
+#------------------------------------------------OUR-FUNCTIONS------------------------------------------------------#
+
+def moveBody(q_map):
+     velma.moveJoint(q_map, 8.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
+     error = velma.waitForJoint()
+     if error != 0:
+         print "The action should have ended without error, but the error code is", error
+         exitError(10)
+ 
+     rospy.sleep(0.5)
+     js = velma.getLastJointState()
+     if not isConfigurationClose(q_map, js[1], tolerance=0.1):
+         exitError(10)
+
+def moveHead(q_dest):
+     velma.moveHead(q_dest, 3.0, start_time=0.5)
+     if velma.waitForHead() != 0:
+         exitError(4)
+     rospy.sleep(0.5)
+     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
+         exitError(5)
 
 def mapBuilding():
      print "To reach the goal position, some trajectory must be exetuted that contains additional, intermediate nodes"
@@ -269,21 +302,6 @@ def handsUp():
      q_map_change['right_arm_1_joint'] = -1.2
      q_map_change['right_arm_3_joint'] = 2
 
-def toCart():
-     print "Switch to cart_imp mode (no trajectory)..."
-     if not velma.moveCartImpRightCurrentPos(start_time=0.2):
-         exitError(8)
-     if velma.waitForEffectorRight() != 0:
-         exitError(9)
-     rospy.sleep(0.5)
-
-def toJnp():
-     print "Switch to jnt_imp mode (no trajectory)..."
-     velma.moveJointImpToCurrentPos(start_time=0.5)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(3)
 
 def checkLeft(dest_q,isBeer):
     	if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), dest_q):
@@ -329,18 +347,7 @@ def right_gripper_action(dest_q,isBeer):
 
 
 def gripper_action(gripper,action,isBeer):
-     if gripper == "left":	
-     	if action == "grab":
-     		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
-     		left_gripper_action(dest_q,isBeer)
-     	elif action == "drop":
-     		dest_q = [0,0,0,0]
-     		left_gripper_action(dest_q,isBeer)
-	else:
-		return
-     	rospy.sleep(1)
-     
-     elif gripper == "right":	
+     if gripper == "right":	
      	if action == "grab":
      		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
      		right_gripper_action(dest_q,isBeer)
@@ -351,6 +358,18 @@ def gripper_action(gripper,action,isBeer):
 	else:
 		return
      	rospy.sleep(1)
+
+     elif gripper == "left":	
+     	if action == "grab":
+     		dest_q = [80.0/180.0*math.pi,80.0/180.0*math.pi,80.0/180.0*math.pi,0]
+     		left_gripper_action(dest_q,isBeer)
+     	elif action == "drop":
+     		dest_q = [0,0,0,0]
+     		left_gripper_action(dest_q,isBeer)
+	else:
+		return
+     	rospy.sleep(1)
+     
      else:
      	return
 
@@ -385,82 +404,10 @@ def moveCart(B_T):
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(10)
 
-def virtualObjectRightHand():
-     print "Creating a virtual object attached to gripper..."
-     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
-     object1 = AttachedCollisionObject()
-     object1.link_name = "right_HandGripLink"
-     object1.object.header.frame_id = "right_HandGripLink"
-     object1.object.id = "object1"
-     object1_prim = SolidPrimitive()
-     object1_prim.type = SolidPrimitive.CYLINDER
-     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
-     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
-     object1.object.primitives.append(object1_prim)
-     object1.object.primitive_poses.append(object1_pose)
-     object1.object.operation = CollisionObject.ADD
-     object1.touch_links = ['right_HandPalmLink',
-         'right_HandFingerOneKnuckleOneLink',
-         'right_HandFingerOneKnuckleTwoLink',
-         'right_HandFingerOneKnuckleThreeLink',
-         'right_HandFingerTwoKnuckleOneLink',
-         'right_HandFingerTwoKnuckleTwoLink',
-         'right_HandFingerTwoKnuckleThreeLink',
-         'right_HandFingerThreeKnuckleTwoLink',
-         'right_HandFingerThreeKnuckleThreeLink']
-     return object1
-
-def virtualObjectLeftHand():
-     print "Creating a virtual object attached to gripper..."
-     # for more details refer to ROS docs for moveit_msgs/AttachedCollisionObject
-     object1 = AttachedCollisionObject()
-     object1.link_name = "left_HandGripLink"
-     object1.object.header.frame_id = "left_HandGripLink"
-     object1.object.id = "object1"
-     object1_prim = SolidPrimitive()
-     object1_prim.type = SolidPrimitive.CYLINDER
-     object1_prim.dimensions=[None, None]    # set initial size of the list to 2
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_HEIGHT] = 0.23
-     object1_prim.dimensions[SolidPrimitive.CYLINDER_RADIUS] = 0.06
-     object1_pose = pm.toMsg(PyKDL.Frame(PyKDL.Rotation.RotY(math.pi/2)))
-     object1.object.primitives.append(object1_prim)
-     object1.object.primitive_poses.append(object1_pose)
-     object1.object.operation = CollisionObject.ADD
-     object1.touch_links = ['left_HandPalmLink',
-         'left_HandFingerOneKnuckleOneLink',
-         'left_HandFingerOneKnuckleTwoLink',
-         'left_HandFingerOneKnuckleThreeLink',
-         'left_HandFingerTwoKnuckleOneLink',
-         'left_HandFingerTwoKnuckleTwoLink',
-         'left_HandFingerTwoKnuckleThreeLink',
-         'left_HandFingerThreeKnuckleTwoLink',
-         'left_HandFingerThreeKnuckleThreeLink']
-     return object1
-
 
 #-----------------------------------------------------MAIN---------------------------------------------------------------#
  
 if __name__ == "__main__":
-
-     # starting position
-     q_map_starting = {'torso_0_joint':0, 'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8,
-         'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85, 'right_arm_4_joint':0, 'right_arm_5_joint':-0.5,
-         'right_arm_6_joint':0, 'left_arm_0_joint':0.3, 'left_arm_1_joint':1.8, 'left_arm_2_joint':-1.25,
-         'left_arm_3_joint':-0.85, 'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
- 
-     # right position
-     q_map_right = {'torso_0_joint':-1.55, 'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8,
-         'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85, 'right_arm_4_joint':0, 'right_arm_5_joint':-0.5,
-         'right_arm_6_joint':0, 'left_arm_0_joint':0.3, 'left_arm_1_joint':1.8, 'left_arm_2_joint':-1.25,
-         'left_arm_3_joint':-0.85, 'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
-
-     # left position
-     q_map_left = {'torso_0_joint':1.55, 'right_arm_0_joint':-0.3, 'right_arm_1_joint':-1.8,
-         'right_arm_2_joint':1.25, 'right_arm_3_joint':0.85, 'right_arm_4_joint':0, 'right_arm_5_joint':-0.5,
-         'right_arm_6_joint':0, 'left_arm_0_joint':0.3, 'left_arm_1_joint':1.8, 'left_arm_2_joint':-1.25,
-         'left_arm_3_joint':-0.85, 'left_arm_4_joint':0, 'left_arm_5_joint':0.5, 'left_arm_6_joint':0 }
 
       # changing dictionary
      q_map_change = {'torso_0_joint':0,
@@ -657,7 +604,6 @@ if __name__ == "__main__":
      """Puszczenie piwka"""
      toJnp()
      gripper_action("right","drop",1); #puszczenie piwka
-     gripper_action("right","grab",0); #chowamy paluszki
      print "Puszczenie piwka"
 
 
@@ -673,6 +619,7 @@ if __name__ == "__main__":
 
 
      """Powrot do pozycji poczatkowej"""
+     gripper_action("right","grab",0); #chowamy paluszki
      planAndExecute(q_map_starting)
      print "Powrot do pozycji poczatkowej"
 
