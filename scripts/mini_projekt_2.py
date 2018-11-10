@@ -84,19 +84,44 @@ def moveVelmaJoints(q_map):
      if not isConfigurationClose(q_map, js[1], tolerance=0.1):
     	 exitError(10)
 
+def rightHandUp():
+     q_map_change['right_arm_0_joint'] = 1.2
+     q_map_change['right_arm_1_joint'] = -1.2
+     q_map_change['right_arm_3_joint'] = 2
+
 def findObject(object):
      T_B_Jar = velma.getTf("B", object) #odebranie pozycji i orientacji obiektu
    
-     z = T_B_Jar.p[2]#z
-     y = T_B_Jar.p[1]#y
-     x = T_B_Jar.p[0]#x
+     z = T_B_Jar.p[2]
+     y = T_B_Jar.p[1]
+     x = T_B_Jar.p[0]
 
      theta = math.atan2(y,x)
 
      return x,y,z,theta
 
+def moveRightGripper(dest_q):
+     print "move right:", dest_q
+     velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
+     if velma.waitForHandRight() != 0:
+         exitError(10)
+     rospy.sleep(0.5)
+     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), dest_q):
+     	exitError(11)
+
+def planTorsoAngle(theta):
+     if theta>1.55:
+	thetaT = 1.55
+     elif theta<-1.55:
+	thetaT = -1.55
+     else:
+        thetaT = theta
+     q_map_change['torso_0_joint'] = thetaT
+
 if __name__ == "__main__":
-     # define some configurations
+     # mapy stawow
+     D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
+
      q_map_starting = {'torso_0_joint':0,
          'right_arm_0_joint':-0.3,   'left_arm_0_joint':0.3,
          'right_arm_1_joint':-1.8,   'left_arm_1_joint':1.8,
@@ -106,14 +131,14 @@ if __name__ == "__main__":
          'right_arm_5_joint':-0.5,   'left_arm_5_joint':0.5,
          'right_arm_6_joint':0,      'left_arm_6_joint':0 }
  
-     q_map_1 = {'torso_0_joint':0.0,
+     q_map_change = {'torso_0_joint':0,
          'right_arm_0_joint':-0.3,   'left_arm_0_joint':0.3,
-         'right_arm_1_joint':-1.57,  'left_arm_1_joint':1.57,
-         'right_arm_2_joint':1.57,   'left_arm_2_joint':-1.57,
-         'right_arm_3_joint':1.57,   'left_arm_3_joint':-1.7,
-         'right_arm_4_joint':0.0,    'left_arm_4_joint':0.0,
-         'right_arm_5_joint':-1.57,  'left_arm_5_joint':1.57,
-         'right_arm_6_joint':0.0,    'left_arm_6_joint':0.0 }
+         'right_arm_1_joint':-1.8,   'left_arm_1_joint':1.8,
+         'right_arm_2_joint':1.25,   'left_arm_2_joint':-1.25,
+         'right_arm_3_joint':0.85,   'left_arm_3_joint':-0.85,
+         'right_arm_4_joint':0,      'left_arm_4_joint':0,
+         'right_arm_5_joint':-0.5,   'left_arm_5_joint':0.5,
+         'right_arm_6_joint':0,      'left_arm_6_joint':0 }
  
      rospy.init_node('test_cimp_imp')
  
@@ -152,13 +177,29 @@ if __name__ == "__main__":
  
 
      """Przejscie do pozycji poczatkowej"""
-     initVelma()
-     print "Przejscie do pozycji poczatkowej"
+     #initVelma()
+     #print "Przejscie do pozycji poczatkowej"
  
 
      # get initial configuration
      js_init = velma.getLastJointState()
 
+     """Znalezienie szafki"""
+     [x,y,z,theta]=findObject("cabinet")
+     print "Znalezienie szafki"
+
+
+     """Ustawienie sie do szafki"""
+     rightHandUp()
+     planTorsoAngle(theta)
+     moveVelmaJoints(q_map_change)
+     print "Ustawienie sie do szafki"
+
+    
+     """Zgiecie palcow prawego chytaka"""
+     dest_q = [90.0/180.0*math.pi,90.0/180.0*math.pi,90.0/180.0*math.pi,180.0/180.0*math.pi]
+     moveRightGripper(dest_q)
+     print "Zgiecie palcow prawego chytaka"
 
      """Przejscie do trybu cart_imp"""
      toCart()
@@ -173,28 +214,32 @@ if __name__ == "__main__":
          print "The core_cs should be in cart_imp state, but it is not"
          exitError(12)
 
-     
-     """Znalezienie prawych drzwi szafki"""
-     [x,y,z,theta]=findObject("right_door")
-     print "Znalezienie prawych drzwi szafki"
+
+     """Ustawienie frame by ustawic chwytak w odleglosci do szafki"""
+     rot = PyKDL.Rotation.RPY(0, 0, theta)
+     help = math.sqrt((y/x)*(y/x)+1)
+     if x<0:
+     	x_new = x+D1/help #ustawienie chwytaka w odstepie od szafki
+     else :
+     	x_new = x-D1/help #ustawienie chwytaka w odstepie od szafki  
+     y_new = (y/x)*x_new #rownanie prostej
+     T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+     print "Ustawienie frame by ustawic chwytak w odleglosci do szafki"
+
 
 
      """Wykonanie testu sterowania impedancyjnego"""
      print "Rozpoczecie testu sterowania impendacyjnego"
-
-
      #START-----------------------------------------------------------------------
      print "This test/tutorial executes simple impedance commands"\
          " in Cartesian impedance mode.\n"
-
      print "To see the tool frame add 'tf' in rviz and enable 'right_arm_tool' frame."
      print "At every state switch to cart_imp, the tool frames are reset."
      print "Also, the tool impedance parameters are reset to 1500N/m in every"\
          " direction for linear stiffness and to 150Nm/rad in every direction for angular"\
          " stiffness, i.e. (1500,1500,1500,150,150,150)."
- 
      print "Moving right wrist to pose defined in world frame..."
-     T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
+     #T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
      if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(13)
      if velma.waitForEffectorRight() != 0:
@@ -205,7 +250,6 @@ if __name__ == "__main__":
      print T_B_T_diff
      if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
          exitError(15)
- 
      print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
      imp_list = [makeWrench(1000,1000,1000,150,150,150),
                  makeWrench(1000,1000,500,150,150,150),
@@ -214,10 +258,8 @@ if __name__ == "__main__":
      if not velma.moveCartImpRight(None, None, None, None, imp_list, [0.5,1.0,1.5,2.0], PyKDL.Wrench(PyKDL.Vector(5,5,5), PyKDL.Vector(5,5,5)), start_time=0.5):
          exitError(16)
      if velma.waitForEffectorRight() != 0:
-         exitError(17)
- 
+         exitError(17) 
      rospy.sleep(1.0)
- 
      print "Set impedance to (1000,1000,1000,150,150,150) in tool frame."
      imp_list = [makeWrench(1000,1000,250,150,150,150),
                  makeWrench(1000,1000,500,150,150,150),
@@ -226,9 +268,14 @@ if __name__ == "__main__":
          exitError(16)
      if velma.waitForEffectorRight() != 0:
          exitError(17)
-     #KONIEC------------------------------------------------------------------------
-     
+     #KONIEC------------------------------------------------------------------------     
      print "Zakonczenie testu sterowania impedancyjnego"
+
+
+
+     """Przejscie do trybu jnp_imp"""
+     toJnp()
+     print "Przejscie do trybu jnp_imp"
 
 
      """Powrot do pozycji poczatkowej"""
