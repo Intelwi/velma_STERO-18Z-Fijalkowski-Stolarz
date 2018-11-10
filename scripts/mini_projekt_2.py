@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import roslib; roslib.load_manifest('velma_task_cs_ros_interface')
 import rospy
+import math
+import PyKDL
  
 from velma_common import *
 from rcprg_ros_utils import exitError
@@ -70,7 +72,7 @@ def initVelma():
      rospy.sleep(1.0)
 
 def moveVelmaJoints(q_map):
-     print "Moving to the next position..."
+     print "Moving to the position defined in q_map"
      velma.moveJoint(q_map, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
      error = velma.waitForJoint()
      if error != 0:
@@ -81,6 +83,17 @@ def moveVelmaJoints(q_map):
      js = velma.getLastJointState()
      if not isConfigurationClose(q_map, js[1], tolerance=0.1):
     	 exitError(10)
+
+def findObject(object):
+     T_B_Jar = velma.getTf("B", object) #odebranie pozycji i orientacji obiektu
+   
+     z = T_B_Jar.p[2]#z
+     y = T_B_Jar.p[1]#y
+     x = T_B_Jar.p[0]#x
+
+     theta = math.atan2(y,x)
+
+     return x,y,z,theta
 
 if __name__ == "__main__":
      # define some configurations
@@ -105,9 +118,6 @@ if __name__ == "__main__":
      rospy.init_node('test_cimp_imp')
  
      rospy.sleep(0.5)
- 
-     print "This test/tutorial executes simple impedance commands"\
-         " in Cartesian impedance mode.\n"
  
      print "Running python interface for Velma..."
      velma = VelmaInterface()
@@ -163,11 +173,20 @@ if __name__ == "__main__":
          print "The core_cs should be in cart_imp state, but it is not"
          exitError(12)
 
+     
+     """Znalezienie prawych drzwi szafki"""
+     [x,y,z,theta]=findObject("right_door")
+     print "Znalezienie prawych drzwi szafki"
 
 
-     """Wykonanie testu sterowania impedancyjnego""" 
-
+     """Wykonanie testu sterowania impedancyjnego"""
      print "Rozpoczecie testu sterowania impendacyjnego"
+
+
+     #START-----------------------------------------------------------------------
+     print "This test/tutorial executes simple impedance commands"\
+         " in Cartesian impedance mode.\n"
+
      print "To see the tool frame add 'tf' in rviz and enable 'right_arm_tool' frame."
      print "At every state switch to cart_imp, the tool frames are reset."
      print "Also, the tool impedance parameters are reset to 1500N/m in every"\
@@ -207,15 +226,15 @@ if __name__ == "__main__":
          exitError(16)
      if velma.waitForEffectorRight() != 0:
          exitError(17)
- 
-
+     #KONIEC------------------------------------------------------------------------
+     
      print "Zakonczenie testu sterowania impedancyjnego"
 
 
      """Powrot do pozycji poczatkowej"""
      moveVelmaJoints(q_map_starting)
      print "Powrot do pozycji poczatkowej"
- 
+
      exitError(0)
  
 
