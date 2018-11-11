@@ -564,7 +564,7 @@ if __name__ == "__main__":
          rospy.sleep(0.5)
          js = velma.getLastJointState()
          print "Planning (try", i, ")..."
-         traj = p.plan(js[1], [goal_constraint_1], "impedance_joints", max_velocity_scaling_factor=0.06, planner_id="RRTConnect", attached_collision_objects=[object1])
+         traj = p.plan(js[1], [goal_constraint_1], "impedance_joints", max_velocity_scaling_factor=0.03, planner_id="RRTConnect", attached_collision_objects=[object1])
          if traj == None:
              continue
          print "Executing trajectory..."
