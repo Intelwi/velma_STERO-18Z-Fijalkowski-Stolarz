@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+""" ZBIOR FUNKCJI I STALYCH """
 import roslib; roslib.load_manifest('velma_task_cs_ros_interface')
 import rospy
 import math
@@ -19,7 +20,7 @@ q_map_starting = {'torso_0_joint':0,
 	'right_arm_5_joint':-0.5,   'left_arm_5_joint':0.5,
 	'right_arm_6_joint':0,      'left_arm_6_joint':0 }
 
-def test():
+def initVelma():
 	global velma
 	rospy.init_node('test_cimp_imp')
 
@@ -154,7 +155,7 @@ def moveVelmaJoints(q_map):
 		exitError(10)
 
 
-def initVelma():
+def initVelmaPosition():
      print ("Moving to the starting position...")
      velma.moveJoint(q_map_starting, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
      error = velma.waitForJoint()
@@ -184,7 +185,7 @@ def initVelma():
          print (q_map_starting)
          exitError(9)
 
-     print ("reset left")
+     print ("reset left gripper")
      velma.resetHandLeft()
      if velma.waitForHandLeft() != 0:
          exitError(2)
@@ -192,7 +193,7 @@ def initVelma():
      if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
          exitError(3)
  
-     print ("reset right")
+     print ("reset right gripper")
      velma.resetHandRight()
      if velma.waitForHandRight() != 0:
          exitError(4)

@@ -11,18 +11,19 @@ from rcprg_ros_utils import exitError
 from fun_container import *
 
 def rightHandUp():
-     q_map_change['right_arm_0_joint'] = 1.2
-     q_map_change['right_arm_1_joint'] = -1.2
-     q_map_change['right_arm_3_joint'] = 2
+	q_map_change['right_arm_0_joint'] = 1.1
+	q_map_change['right_arm_1_joint'] = -1.3
+	q_map_change['right_arm_3_joint'] = 2
+	q_map_change['right_arm_4_joint'] = 0.2
 
 def planTorsoAngle(theta):
-     if theta>1.55:
-	    thetaT = 1.55
-     elif theta<-1.55:
-	    thetaT = -1.55
-     else:
-        thetaT = theta
-     q_map_change['torso_0_joint'] = thetaT
+	if theta>1.55:
+		thetaT = 1.55
+	elif theta<-1.55:
+		thetaT = -1.55
+	else:
+		thetaT = theta
+	q_map_change['torso_0_joint'] = thetaT
 
 if __name__ == "__main__":
 	
@@ -35,8 +36,9 @@ if __name__ == "__main__":
          'right_arm_4_joint':0,      'left_arm_4_joint':0,
          'right_arm_5_joint':-0.5,   'left_arm_5_joint':0.5,
          'right_arm_6_joint':0,      'left_arm_6_joint':0 }
- 
-     test()
+
+     """Uruchomienie interfejsu Velmy i sprawdzenie silnikow"""
+     initVelma()
      
 
      """Przejscie do trybu jnp_imp"""
@@ -45,8 +47,8 @@ if __name__ == "__main__":
  
  
      """Przejscie do pozycji poczatkowej"""
-     #initVelma(velma)
-     #print "Przejscie do pozycji poczatkowej"
+     initVelmaPosition()
+     print "Przejscie do pozycji poczatkowej"
  
 
      # get initial configuration
