@@ -123,6 +123,25 @@ def impedStearing(T_B_Trd): # cart?
 	print T_B_T_diff
 	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
 		exitError(15)
+
+	#TEST DODANY ------- Przesun reke w bok
+	print "przesuniecie reki"
+	[x,y,z,theta] = findObject("cabinet")
+	rot = PyKDL.Rotation.RPY(0, 0, theta)
+	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.5,y-0.07,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka bylo
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
+		exitError(13)
+	if velma.waitForEffectorRight() != 0:
+		exitError(14)
+	rospy.sleep(0.5)
+	
+	print "Calculating difference between desiread and reached pose..."
+	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
+	print T_B_T_diff
+	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+		exitError(15)
+	#TEST DODANY ------ KONIEC
+
 	
 	print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
 	imp_list = [makeWrench([1000,1000,1000],[150,150,150]),
@@ -135,7 +154,9 @@ def impedStearing(T_B_Trd): # cart?
 		exitError(17) 
 	rospy.sleep(1.0)
 	
+
 	#----------------walnij w szafe
+	"""
 	[x,y,z,theta] = findObject("cabinet")
 	rot = PyKDL.Rotation.RPY(0, 0, theta)
 	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.3,y,z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
@@ -151,9 +172,59 @@ def impedStearing(T_B_Trd): # cart?
 	
 	print "Calculating difference between desiread and reached pose..."
 	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
+	print T_B_T_diff"""
+	#--------------------------------
+
+
+
+
+
+
+
+
+	""" W tescie dodanym zostalo uzyte velma.waitForEffectorRight(timeout_s = x) gdzie velma przestaje napierac na szafke po czasie x. To nie dziala bo trzeba dobierac czas x. Ciekawe bo argument timeout_s wcalenie nie jest wymagany. Trzeba jakos uzyc T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0)."""
+	
+
+	#TEST DODANY -------OTWIERANIE SZAFKI ZLA METODA--------------------------------------------------------------------------------
+	#----------------walnij w szafe
+	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.4,y-0.07,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka bylo
+	print "Moving right wrist to pose defined in world frame..."
+	#T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
+	a=5
+	b=0.5
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+		exitError(13)
+	if velma.waitForEffectorRight(timeout_s = 3) != 0:  # ODE Message 3: LCP internal error, s <= 0 (s=-0.0000e+00)
+		print "Walnelam w szafke!"
+	rospy.sleep(0.5)
+
+	#Znalezienie klampki
+	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.4,y,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	print "Moving right wrist to pose defined in world frame..."
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+		exitError(13)
+	if velma.waitForEffectorRight(timeout_s = 3) != 0:  # ODE Message 3: LCP internal error, s <= 0 (s=-0.0000e+00)
+		print "Znalazlam klamke!"
+	rospy.sleep(0.5)
+
+	#Pociagniecie
+	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.6,y,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka bylo
+	print "Moving right wrist to pose defined in world frame..."
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+		exitError(13)
+	if velma.waitForEffectorRight(timeout_s = 3) != 0:  # ODE Message 3: LCP internal error, s <= 0 (s=-0.0000e+00)
+		print "Znalazlam drugi punkt okregu!"
+	rospy.sleep(0.5)
+	
+	print "Calculating difference between desiread and reached pose..."
+	T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0)
 	print T_B_T_diff
 	#--------------------------------
+	#TEST DODANY -----KONIEC---------------------------------------------------------------------------------------------
 	
+
+	
+
 	# ~ print "Set impedance to (1000,1000,1000,150,150,150) in tool frame."
 	# ~ imp_list = [makeWrench([1000,1000,250],[150,150,150]),
 		# ~ makeWrench([1000,1000,500],[150,150,150]),
