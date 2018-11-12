@@ -101,7 +101,7 @@ def moveVelmaJoints(q_map): # inp
 		
 
 def impedStearing(T_B_Trd): # cart?
-	print "Rozpoczecie testu sterowania impendacyjnego"
+	print "Rozpoczecie testu sterowania impendacyjnego------------------"
 
 	# This test/tutorial executes simple impedance commands in Cartesian impedance mode.
 	# To see the tool frame add 'tf' in rviz and enable 'right_arm_tool' frame.
@@ -135,15 +135,34 @@ def impedStearing(T_B_Trd): # cart?
 		exitError(17) 
 	rospy.sleep(1.0)
 	
-	print "Set impedance to (1000,1000,1000,150,150,150) in tool frame."
-	imp_list = [makeWrench([1000,1000,250],[150,150,150]),
-		makeWrench([1000,1000,500],[150,150,150]),
-		makeWrench([1000,1000,1000],[150,150,150])]
-	if not velma.moveCartImpRight(None, None, None, None, imp_list, [0.5,1.0,1.5], makeWrench([5,5,5], [5,5,5]), start_time=0.5):
-		exitError(16)
-	if velma.waitForEffectorRight() != 0:
-		exitError(17)
-	rospy.sleep(1.0) #?
+	#----------------walnij w szafe
+	[x,y,z,theta] = findObject("cabinet")
+	rot = PyKDL.Rotation.RPY(0, 0, theta)
+	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.3,y,z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	print "Moving right wrist to pose defined in world frame..."
+	#T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
+	a=5
+	b=0.5
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+		exitError(13)
+	if velma.waitForEffectorRight(timeout_s = 1) != 0:  # ODE Message 3: LCP internal error, s <= 0 (s=-0.0000e+00)
+		exitError(14)
+	rospy.sleep(0.5)
+	
+	print "Calculating difference between desiread and reached pose..."
+	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
+	print T_B_T_diff
+	#--------------------------------
+	
+	# ~ print "Set impedance to (1000,1000,1000,150,150,150) in tool frame."
+	# ~ imp_list = [makeWrench([1000,1000,250],[150,150,150]),
+		# ~ makeWrench([1000,1000,500],[150,150,150]),
+		# ~ makeWrench([1000,1000,1000],[150,150,150])]
+	# ~ if not velma.moveCartImpRight(None, None, None, None, imp_list, [0.5,1.0,1.5], makeWrench([5,5,5], [5,5,5]), start_time=0.5):
+		# ~ exitError(16)
+	# ~ if velma.waitForEffectorRight() != 0:
+		# ~ exitError(17)
+	# ~ rospy.sleep(1.0) #?
 	  
 	print "Zakonczenie testu sterowania impedancyjnego"
 	
