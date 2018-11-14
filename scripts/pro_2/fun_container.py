@@ -57,14 +57,16 @@ def planTorsoAngle(theta):
 	
 def findObject(object_id):
 	T_B_Jar = velma.getTf("B", object_id) #odebranie pozycji i orientacji obiektu
-
+	rot = T_B_Jar.M #pobranie orientacji szafki
 	z = T_B_Jar.p[2]
 	y = T_B_Jar.p[1]
 	x = T_B_Jar.p[0]
 
 	theta = math.atan2(y,x)
-
-	return x,y,z,theta
+	[R,P,Y]=rot.GetRPY()
+	print "z findObject", Y
+	print "Wspolrzedne szafki ", T_B_Jar.p
+	return x,y,z,theta,Y
 	
 	
 def makeWrench(force, torque):
@@ -77,7 +79,7 @@ def makeWrench(force, torque):
 #----------------------------------------v-MOVES-v-------------------------------------------#
 
 def moveRightGripper(dest_q): # cart
-	print "move right gripper to:", dest_q
+	print "fold right gripper's fingers"
 	velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
 	if velma.waitForHandRight() != 0:
 		exitError(10)
@@ -123,10 +125,10 @@ def impedStearing(T_B_Trd): # cart?
 	print T_B_T_diff
 	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
 		exitError(15)
-
+"""
 	#TEST DODANY ------- Przesun reke w bok
 	print "przesuniecie reki"
-	[x,y,z,theta] = findObject("cabinet")
+	[x,y,z,theta,rot] = findObject("cabinet")
 	rot = PyKDL.Rotation.RPY(0, 0, theta)
 	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.5,y-0.07,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka bylo
 	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
@@ -156,7 +158,7 @@ def impedStearing(T_B_Trd): # cart?
 	
 
 	#----------------walnij w szafe
-	"""
+	
 	[x,y,z,theta] = findObject("cabinet")
 	rot = PyKDL.Rotation.RPY(0, 0, theta)
 	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.3,y,z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
@@ -172,7 +174,7 @@ def impedStearing(T_B_Trd): # cart?
 	
 	print "Calculating difference between desiread and reached pose..."
 	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff"""
+	print T_B_T_diff
 	#--------------------------------
 
 
@@ -182,7 +184,7 @@ def impedStearing(T_B_Trd): # cart?
 
 
 
-	""" W tescie dodanym zostalo uzyte velma.waitForEffectorRight(timeout_s = x) gdzie velma przestaje napierac na szafke po czasie x. To nie dziala bo trzeba dobierac czas x. Ciekawe bo argument timeout_s wcalenie nie jest wymagany. Trzeba jakos uzyc T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0)."""
+	 W tescie dodanym zostalo uzyte velma.waitForEffectorRight(timeout_s = x) gdzie velma przestaje napierac na szafke po czasie x. To nie dziala bo trzeba dobierac czas x. Ciekawe bo argument timeout_s wcalenie nie jest wymagany. Trzeba jakos uzyc T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0).
 	
 
 	#TEST DODANY -------OTWIERANIE SZAFKI ZLA METODA--------------------------------------------------------------------------------
@@ -218,11 +220,11 @@ def impedStearing(T_B_Trd): # cart?
 	
 	print "Calculating difference between desiread and reached pose..."
 	T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff
+	print T_B_T_diff"""
 	#--------------------------------
 	#TEST DODANY -----KONIEC---------------------------------------------------------------------------------------------
 	
-
+	
 	
 
 	# ~ print "Set impedance to (1000,1000,1000,150,150,150) in tool frame."
@@ -235,7 +237,7 @@ def impedStearing(T_B_Trd): # cart?
 		# ~ exitError(17)
 	# ~ rospy.sleep(1.0) #?
 	  
-	print "Zakonczenie testu sterowania impedancyjnego"
+	#print "Zakonczenie testu sterowania impedancyjnego"
 	
 	
 #--------------------------------------------------------------------------------------------#
