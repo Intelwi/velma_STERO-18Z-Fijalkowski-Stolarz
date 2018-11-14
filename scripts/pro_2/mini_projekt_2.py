@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by uderzyl w szafke"""
-	x_new = 0.41
+	x_new = 0.4
 	init_vector = PyKDL.Vector(x_new,y_new,z_new) #wektor poczatkowy
 	final_vector = PyKDL.Rotation.RPY(0,0,Y)*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
@@ -90,7 +90,32 @@ if __name__ == "__main__":
 
 
 	"""Wykonanie testu sterowania impedancyjnego"""
-	impedStearing(T_B_Trd)
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
+	print "Wykonanie testu sterowania impedancyjnego"
+
+	"""Utworzenie macierzy jednorodnej dla chwytaka by lekko cofnal reke"""
+	x_new = 0.43
+	init_vector = PyKDL.Vector(x_new,y_new,z_new) #wektor poczatkowy
+	final_vector = PyKDL.Rotation.RPY(0,0,Y)*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
+	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	print "Utworzenie macierzy jednorodnej dla chwytaka by lekko cofnal reke"
+
+	
+	"""Lekkie cofnancie reki"""
+	moveCart(T_B_Trd)
+	print "Lekkie cofnancie reki"
+
+	#TO JUZ NIE DZIALA -------------NIE WIEM CZEMU----------------------------------------------------------------------------------------------
+
+	"""Wyliczenie punktu do ktorego ma poruszyc reka zeby trafic w uchwyt (doswiadczalne y, wyliczamy x), mamy kat orientacji szafki, wiec mozna sobie wyliczyc prosta laczaca obecne polozenie chwytaka i to ktore bedzie przy uchwycie"""
+	y_new=0.07 #doswiadczalne y tak by chwytak uderzyl w uchwyt
+	x_new = (y_new - y_g + x_g*math.tan(Y))/math.tan(Y) #wyliczenie x_new dla y_new tak by chwytak poruszal sie wzdluz drzwiczek szafki
+	final_vector = PyKDL.Vector(x_new,y_new,z_new)
+	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka do uderzenia w uchwyt
+	print "Utworzenie macierzy jednorodnej dla chwytaka by uderzyl w uchwyt szafki poruszajac chwytakiem wzdluz drzwiczek"
+
+	"""Wykonanie testu sterowania impedancyjnego"""
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
 	print "Wykonanie testu sterowania impedancyjnego"
 
 

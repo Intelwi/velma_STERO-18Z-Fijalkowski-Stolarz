@@ -64,8 +64,6 @@ def findObject(object_id):
 
 	theta = math.atan2(y,x)
 	[R,P,Y]=rot.GetRPY()
-	print "z findObject", Y
-	print "Wspolrzedne szafki ", T_B_Jar.p
 	return x,y,z,theta,Y
 	
 	
@@ -141,7 +139,7 @@ def impedStearing(T_B_Trd): # cart?
 	"""
 
 	"""TEST WALNIECIA W SZAFKE"""
-	a=5 #przykladowa wartosc
+	a=0.5 #przykladowa wartosc
 	b=0.02 #przykladowa wartosc
 
 	print "Moving right wrist to pose defined in world frame..."
@@ -153,7 +151,7 @@ def impedStearing(T_B_Trd): # cart?
 		T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
 		print T_B_T_diff
 		print "Koniec testu walniecia w szafke"
-		return actual_gripper_position
+		return actual_gripper_position.p[0] , actual_gripper_position.p[1], actual_gripper_position.p[2]
 	exitError("Pose reached, there was no collision") #jak sie nie zderzy z niczym to po co ktos ma uzyc impedStearing?
 
 
