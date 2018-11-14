@@ -43,8 +43,6 @@ if __name__ == "__main__":
 	z = z_
 	theta = theta_
 	Y = Y_
-	#print [x,y,z,theta,rot]
-	print "z maina", Y
 	print "Znalezienie szafki"
 
 
@@ -65,38 +63,35 @@ if __name__ == "__main__":
 	toCart()
 	print "Przejscie do trybu cart_imp"
 
-	"""
-	#Ustawienie frame by ustawic chwytak w odleglosci D1 do szafki
-	rot = PyKDL.Rotation.RPY(0, 0, yaw + 3.14)
-	mian = math.sqrt((y/x)*(y/x)+1)
-	if x<0:
-		x_new = x+D1/mian #ustawienie chwytaka w odstepie od szafki
-	else :
-		x_new = x-D1/mian #ustawienie chwytaka w odstepie od szafki  
-	y_new = (y/x)*x_new #rownanie prostej
-	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x_new,y_new, z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-	"""
-
+	
+	"""Utworzenie macierzy jednorodnej dla chwytaka"""
 	x_new = 0.5 
-	y_new = 0.07
+	y_new = 0.12
 	z_new = 0.13
 	init_vector = PyKDL.Vector(x_new,y_new,z_new) #wektor poczatkowy
 	coords_cabinet = PyKDL.Vector(x,y,z) #wspolrzedne szafki
-	#T_B_cab = PyKDL.Frame(PyKDL.Rotation.RPY(0,0,Y), coords_cabinet) #tworzenie macierzy jednorodnej szafki
-	
-	final_vector = PyKDL.Rotation.RPY(0,0,Y)*init_vector+coords_cabinet
-	print "Y:", Y
-	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi)
-
-	print "final vector", final_vector
-	print Y
-	
+	final_vector = PyKDL.Rotation.RPY(0,0,Y)*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
+	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi)	#obrot chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
-	print "Ustawienie frame by ustawic chwytak w odleglosci do szafki"
+	print "Utworzenie macierzy jednorodnej dla chwytaka"
+
+
+	"""Ustawienie chwytaka blisko szafki"""
+	moveCart(T_B_Trd)
+	print "Ustawienie chwytaka blisko szafki"
+
+
+	"""Utworzenie macierzy jednorodnej dla chwytaka by uderzyl w szafke"""
+	x_new = 0.41
+	init_vector = PyKDL.Vector(x_new,y_new,z_new) #wektor poczatkowy
+	final_vector = PyKDL.Rotation.RPY(0,0,Y)*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
+	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	print "Utworzenie macierzy jednorodnej dla chwytaka by uderzyl w szafke"
 
 
 	"""Wykonanie testu sterowania impedancyjnego"""
 	impedStearing(T_B_Trd)
+	print "Wykonanie testu sterowania impedancyjnego"
 
 
 	"""Przejscie do trybu jnp_imp"""

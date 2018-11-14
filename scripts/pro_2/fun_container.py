@@ -102,7 +102,22 @@ def moveVelmaJoints(q_map): # inp
 		exitError(10)
 		
 
+def moveCart(T_B_Trd): # cart?
+	print "Moving right wrist to pose defined in world frame..."
+	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
+		exitError(13)
+	if velma.waitForEffectorRight() != 0:
+		exitError(14)
+	rospy.sleep(0.5)
+	
+	print "Calculating difference between desiread and reached pose..."
+	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
+	print T_B_T_diff
+	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
+		exitError(15)
+
 def impedStearing(T_B_Trd): # cart?
+
 	print "Rozpoczecie testu sterowania impendacyjnego------------------"
 
 	# This test/tutorial executes simple impedance commands in Cartesian impedance mode.
@@ -111,40 +126,8 @@ def impedStearing(T_B_Trd): # cart?
 	# Also, the tool impedance parameters are reset to 1500N/m in every
 	# direction for linear stiffness and to 150Nm/rad in every direction for angular
 	# stiffness, i.e. (1500,1500,1500,150,150,150)."
-		
-	print "Moving right wrist to pose defined in world frame..."
-	#T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
-	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
-		exitError(13)
-	if velma.waitForEffectorRight() != 0:
-		exitError(14)
-	rospy.sleep(0.5)
-	
-	print "Calculating difference between desiread and reached pose..."
-	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff
-	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-		exitError(15)
-"""
-	#TEST DODANY ------- Przesun reke w bok
-	print "przesuniecie reki"
-	[x,y,z,theta,rot] = findObject("cabinet")
-	rot = PyKDL.Rotation.RPY(0, 0, theta)
-	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.5,y-0.07,z+0.16)) #tworzenie macierzy jednorodnej do ustawienia chwytaka bylo
-	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
-		exitError(13)
-	if velma.waitForEffectorRight() != 0:
-		exitError(14)
-	rospy.sleep(0.5)
-	
-	print "Calculating difference between desiread and reached pose..."
-	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff
-	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
-		exitError(15)
-	#TEST DODANY ------ KONIEC
 
-	
+	"""
 	print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
 	imp_list = [makeWrench([1000,1000,1000],[150,150,150]),
 		makeWrench([1000,1000,500],[150,150,150]),
@@ -155,34 +138,26 @@ def impedStearing(T_B_Trd): # cart?
 	if velma.waitForEffectorRight() != 0:
 		exitError(17) 
 	rospy.sleep(1.0)
-	
+	"""
 
-	#----------------walnij w szafe
-	
-	[x,y,z,theta] = findObject("cabinet")
-	rot = PyKDL.Rotation.RPY(0, 0, theta)
-	T_B_Trd = PyKDL.Frame(rot, PyKDL.Vector(x-0.3,y,z)) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	"""TEST WALNIECIA W SZAFKE"""
+	a=5 #przykladowa wartosc
+	b=0.02 #przykladowa wartosc
+
 	print "Moving right wrist to pose defined in world frame..."
-	#T_B_Trd = PyKDL.Frame(PyKDL.Rotation.Quaternion( 0.0 , 0.0 , 0.0 , 1.0 ), PyKDL.Vector( 0.7 , -0.3 , 1.3 ))
-	a=5
-	b=0.5
 	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
 		exitError(13)
-	if velma.waitForEffectorRight(timeout_s = 1) != 0:  # ODE Message 3: LCP internal error, s <= 0 (s=-0.0000e+00)
-		exitError(14)
-	rospy.sleep(0.5)
-	
-	print "Calculating difference between desiread and reached pose..."
-	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff
-	#--------------------------------
+	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
+		print "Calculating difference between desiread and reached pose..."
+		actual_gripper_position = velma.getTf("B", "Tr") #aktualna pozycja chwytaka
+		T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
+		print T_B_T_diff
+		print "Koniec testu walniecia w szafke"
+		return actual_gripper_position
+	exitError("Pose reached, there was no collision") #jak sie nie zderzy z niczym to po co ktos ma uzyc impedStearing?
 
 
-
-
-
-
-
+"""
 
 	 W tescie dodanym zostalo uzyte velma.waitForEffectorRight(timeout_s = x) gdzie velma przestaje napierac na szafke po czasie x. To nie dziala bo trzeba dobierac czas x. Ciekawe bo argument timeout_s wcalenie nie jest wymagany. Trzeba jakos uzyc T_B_T_diff = PyKDL.diff(T_B_first, velma.getTf("B", "Tr"), 1.0).
 	
