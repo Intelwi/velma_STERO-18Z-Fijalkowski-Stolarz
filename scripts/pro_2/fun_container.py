@@ -13,6 +13,7 @@ from rcprg_ros_utils import exitError
 #-------------------------------------v-"CONSTANTS"-v----------------------------------------#
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
+move_time = 2.0 # czas ruchu
 
 # mapa stawow do modyfikacji
 q_map_changing = {'torso_0_joint':0,
@@ -39,8 +40,8 @@ q_map_starting = {'torso_0_joint':0,
 #--------------------------------------v-FUNCTIONS-v-----------------------------------------#
 
 def rightHandUp():
-	q_map_changing['right_arm_0_joint'] = 1.1
-	q_map_changing['right_arm_1_joint'] = -1.3
+	q_map_changing['right_arm_0_joint'] = 1.0
+	q_map_changing['right_arm_1_joint'] = -1.1
 	q_map_changing['right_arm_3_joint'] = 2
 	q_map_changing['right_arm_4_joint'] = 0.2
 	
@@ -76,7 +77,7 @@ def makeWrench(force, torque):
 #--------------------------------------------------------------------------------------------#
 #----------------------------------------v-MOVES-v-------------------------------------------#
 
-def moveRightGripper(dest_q): # cart
+def moveRightGripper(dest_q): # jnp
 	print "fold right gripper's fingers"
 	velma.moveHandRight(dest_q, [1,1,1,1], [2000,2000,2000,2000], 1000, hold=True)
 	if velma.waitForHandRight() != 0:
@@ -86,9 +87,10 @@ def moveRightGripper(dest_q): # cart
 		exitError(11)
 
 
-def moveVelmaJoints(q_map): # inp
+def moveVelmaJoints(q_map): # jnp
+	global move_time
 	print "Moving to the position defined in q_map"
-	velma.moveJoint(q_map, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
+	velma.moveJoint(q_map, move_time, start_time=0.01, position_tol=15.0/180.0*math.pi)
 	error = velma.waitForJoint()
 	if error != 0:
 		print "The action should have ended without error, but the error code is", error
@@ -100,9 +102,10 @@ def moveVelmaJoints(q_map): # inp
 		exitError(10)
 		
 
-def moveCart(T_B_Trd): # cart?
+def moveCart(T_B_Trd): # cart
+	global move_time
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.5):
+	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.01):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0:
 		exitError(14)
@@ -110,13 +113,28 @@ def moveCart(T_B_Trd): # cart?
 	
 	print "Calculating difference between desiread and reached pose..."
 	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	print T_B_T_diff
+	#print T_B_T_diff
 	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
 		exitError(15)
+		
+		
+def settingImpedance(imp_list):
+	print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
+	'''example:
+	imp_list = [makeWrench([1000,1000,1000],[150,150,150]),
+		makeWrench([1000,1000,500],[150,150,150]),
+		makeWrench([1000,1000,250],[150,150,150]),
+		makeWrench([1000,1000,125],[150,150,150])]'''
+	if not velma.moveCartImpRight(None, None, None, None, imp_list, [0.5,1.0,1.5,2.0], makeWrench([5,5,5], [5,5,5]), start_time=0.01):
+		exitError(16)
+	if velma.waitForEffectorRight() != 0:
+		exitError(17) 
+	rospy.sleep(1.0)
+	
 
-def impedStearing(T_B_Trd): # cart?
-
-	print "Rozpoczecie testu sterowania impendacyjnego------------------"
+def impedStearing(T_B_Trd): # cart
+	global move_time
+	print "Rozpoczecie sterowania impendacyjnego---------------------------"
 
 	# This test/tutorial executes simple impedance commands in Cartesian impedance mode.
 	# To see the tool frame add 'tf' in rviz and enable 'right_arm_tool' frame.
@@ -125,32 +143,20 @@ def impedStearing(T_B_Trd): # cart?
 	# direction for linear stiffness and to 150Nm/rad in every direction for angular
 	# stiffness, i.e. (1500,1500,1500,150,150,150)."
 
-	"""
-	print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
-	imp_list = [makeWrench([1000,1000,1000],[150,150,150]),
-		makeWrench([1000,1000,500],[150,150,150]),
-		makeWrench([1000,1000,250],[150,150,150]),
-		makeWrench([1000,1000,125],[150,150,150])]
-	if not velma.moveCartImpRight(None, None, None, None, imp_list, [0.5,1.0,1.5,2.0], makeWrench([5,5,5], [5,5,5]), start_time=0.5):
-		exitError(16)
-	if velma.waitForEffectorRight() != 0:
-		exitError(17) 
-	rospy.sleep(1.0)
-	"""
-
 	"""TEST WALNIECIA W SZAFKE"""
-	a=0.5 #przykladowa wartosc
-	b=0.02 #przykladowa wartosc
+	a=0.5 # max wrench (domyslne: 0.5)
+	b=0.02 # tolerancja velocity (domyslne: none)
+	d=0.0 # tlumienie (domyslne: 0.7)
 
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [3.0], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.5, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.01, 
+	damping = PyKDL.Wrench(PyKDL.Vector(d,d,d),PyKDL.Vector(d,d,d)), path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
 		print "Calculating difference between desiread and reached pose..."
 		actual_gripper_position = velma.getTf("B", "Tr") #aktualna pozycja chwytaka
 		T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
-		print T_B_T_diff
-		print "Koniec testu walniecia w szafke"
+		#print T_B_T_diff
 		return actual_gripper_position.p[0] , actual_gripper_position.p[1], actual_gripper_position.p[2]
 	exitError("Pose reached, there was no collision") #jak sie nie zderzy z niczym to po co ktos ma uzyc impedStearing?
 
@@ -269,50 +275,51 @@ def initVelma():
 		
 
 def initVelmaPosition():
-     print "Moving to the starting position..."
-     velma.moveJoint(q_map_starting, 9.0, start_time=0.5, position_tol=15.0/180.0*math.pi)
-     error = velma.waitForJoint()
-     if error != 0:
-         print "The action should have ended without error, but the error code is", error
-         exitError(6)
- 
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
-         exitError(10)
+	global move_time
+	print "Moving to the starting position..."
+	velma.moveJoint(q_map_starting, move_time*2, start_time=0.01, position_tol=15.0/180.0*math.pi)
+	error = velma.waitForJoint()
+	if error != 0:
+		print "The action should have ended without error, but the error code is", error
+		exitError(6)
 
-     print "moving head to position: 0"
-     q_dest = (0,0)
-     velma.moveHead(q_dest, 1.0, start_time=0.5)
-     if velma.waitForHead() != 0:
-         exitError(4)
-     rospy.sleep(0.5)
-     if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
-         exitError(5)
+	rospy.sleep(0.5)
+	js = velma.getLastJointState()
+	if not isConfigurationClose(q_map_starting, js[1], tolerance=0.1):
+		exitError(10)
 
-     print "Checking if the starting configuration is as expected..."
-     rospy.sleep(0.5)
-     js = velma.getLastJointState()
-     if not isConfigurationClose(q_map_starting, js[1], tolerance=0.2):
-         print "This test requires starting pose:"
-         print q_map_starting
-         exitError(9)
+	print "moving head to position: 0"
+	q_dest = (0,0)
+	velma.moveHead(q_dest, move_time, start_time=0.01)
+	if velma.waitForHead() != 0:
+		exitError(4)
+	rospy.sleep(0.5)
+	if not isHeadConfigurationClose( velma.getHeadCurrentConfiguration(), q_dest, 0.1 ):
+		exitError(5)
 
-     print "reset left gripper"
-     velma.resetHandLeft()
-     if velma.waitForHandLeft() != 0:
-         exitError(2)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
-         exitError(3)
- 
-     print "reset right gripper"
-     velma.resetHandRight()
-     if velma.waitForHandRight() != 0:
-         exitError(4)
-     rospy.sleep(0.5)
-     if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), [0,0,0,0]):
-         exitError(5)
- 
-     rospy.sleep(1.0)
-     
+	print "Checking if the starting configuration is as expected..."
+	rospy.sleep(0.5)
+	js = velma.getLastJointState()
+	if not isConfigurationClose(q_map_starting, js[1], tolerance=0.2):
+		print "This test requires starting pose:"
+		print q_map_starting
+		exitError(9)
+
+	print "reset left gripper"
+	velma.resetHandLeft()
+	if velma.waitForHandLeft() != 0:
+		exitError(2)
+	rospy.sleep(0.5)
+	if not isHandConfigurationClose( velma.getHandLeftCurrentConfiguration(), [0,0,0,0]):
+		exitError(3)
+
+	print "reset right gripper"
+	velma.resetHandRight()
+	if velma.waitForHandRight() != 0:
+		exitError(4)
+	rospy.sleep(0.5)
+	if not isHandConfigurationClose( velma.getHandRightCurrentConfiguration(), [0,0,0,0]):
+		exitError(5)
+
+	rospy.sleep(1.0)
+
