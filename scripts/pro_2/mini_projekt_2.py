@@ -78,14 +78,15 @@ if __name__ == "__main__":
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by uderzyl w szafke"""
-	x_relative = 0.4
+	x_relative = 0.3
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w szafke"
 
 	"""Walniecie w szafke"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
+	imped = makeWrench([350,350,350],[50,50,50]),
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: test walniecia w szafke"
 	rospy.sleep(0.5)
 
@@ -113,7 +114,7 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w uchwyt szafki"
 
 	"""Dojechanie do uchwytu"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: dojechanie do uchwytu"
 	rospy.sleep(0.5)
 
@@ -127,7 +128,7 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
 	"""Pociagniecie drzwiczek"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: pociagniecie drzwiczek"
 	rospy.sleep(0.5)
 	
@@ -142,7 +143,7 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by wyswobodzil lape"
 
 	"""Wyswobodzenie lapy"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: wyswobodzenie lapy"
 	rospy.sleep(0.5)
 	

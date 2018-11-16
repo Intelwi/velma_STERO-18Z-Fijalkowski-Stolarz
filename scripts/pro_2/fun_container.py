@@ -13,7 +13,7 @@ from rcprg_ros_utils import exitError
 #-------------------------------------v-"CONSTANTS"-v----------------------------------------#
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
-move_time = 2.0 # czas ruchu
+move_time = 3.0 # czas ruchu
 
 # mapa stawow do modyfikacji
 q_map_changing = {'torso_0_joint':0,
@@ -117,7 +117,7 @@ def moveCart(T_B_Trd): # cart
 	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
 		exitError(15)
 		
-		
+"""
 def settingImpedance(imp_list):
 	print "Set impedance to (1000,1000,125,150,150,150) in tool frame."
 	'''example:
@@ -130,9 +130,9 @@ def settingImpedance(imp_list):
 	if velma.waitForEffectorRight() != 0:
 		exitError(17) 
 	rospy.sleep(1.0)
-	
+	"""
 
-def impedStearing(T_B_Trd): # cart
+def impedStearing(T_B_Trd,imp_list): # cart
 	global move_time
 	print "Rozpoczecie sterowania impendacyjnego---------------------------"
 
@@ -144,13 +144,10 @@ def impedStearing(T_B_Trd): # cart
 	# stiffness, i.e. (1500,1500,1500,150,150,150)."
 
 	"""TEST WALNIECIA W SZAFKE"""
-	a=0.5 # max wrench (domyslne: 0.5)
 	b=0.02 # tolerancja velocity (domyslne: none)
-	d=0.0 # tlumienie (domyslne: 0.7)
 
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, None, None, makeWrench([a,a,a], [a,a,a]), start_time=0.01, 
-	damping = PyKDL.Wrench(PyKDL.Vector(d,d,d),PyKDL.Vector(d,d,d)), path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, imp_list, [0.5], makeWrench([5,5,5], [5,5,5]), start_time=0.01, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
 		print "Calculating difference between desiread and reached pose..."
