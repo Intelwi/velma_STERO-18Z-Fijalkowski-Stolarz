@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
 
 	"""Zgiecie palcow prawego chytaka"""
-	dest_q = [90.0/180.0*math.pi, 90.0/180.0*math.pi, 90.0/180.0*math.pi, math.pi]
+	dest_q = [77.0/180.0*math.pi, 77.0/180.0*math.pi, 77.0/180.0*math.pi, math.pi]
 	moveRightGripper(dest_q)
 	print "WYKONANO: zgiecie palcow prawego chytaka"
 
@@ -85,14 +85,18 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w szafke"
 
 	"""Walniecie w szafke"""
-	imped = makeWrench([350,350,350],[50,50,50]),
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
+	lk=500
+	ak=70
+	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05) #zwraca aktualne polozenie chwytaka
+	x_g_relative = (PyKDL.Rotation.RPY(0,0,-Y)*(PyKDL.Vector(x_g,y_g,z_g)-coords_cabinet)).x() # wzgledny wektor polozenia przy uderzeniu
+	#print x_g_relative
 	print "WYKONANO: test walniecia w szafke"
 	rospy.sleep(0.5)
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by lekko cofnal reke"""
-	x_relative = 0.43
+	x_relative = x_g_relative + 0.02
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
@@ -102,11 +106,10 @@ if __name__ == "__main__":
 	moveCart(T_B_Trd)
 	print "WYKONANO: lekkie cofnancie reki"
 	rospy.sleep(0.5)
-
-	#TO JUZ w miare DZIALA -------------WIEM CZEMU----------------------------------------------------------------------------------------------
+	
 
 	"""Wyliczenie punktu do ktorego ma poruszyc reka zeby trafic w uchwyt (doswiadczalne y, wyliczamy x), mamy kat orientacji szafki, wiec mozna sobie wyliczyc prosta laczaca obecne polozenie chwytaka i to ktore bedzie przy uchwycie"""
-	y_relative=-0.03 #doswiadczalne y tak by chwytak uderzyl w uchwyt
+	y_relative=-0.05 #doswiadczalne y tak by chwytak uderzyl w uchwyt
 	#x_relative = (y_new - y_g + x_g*math.tan(Y))/math.tan(Y) #wyliczenie x_new dla y_new tak by chwytak poruszal sie wzdluz drzwiczek szafki
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative)
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
@@ -114,13 +117,16 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w uchwyt szafki"
 
 	"""Dojechanie do uchwytu"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
+	lk=800
+	ak=50
+	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.028) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: dojechanie do uchwytu"
 	rospy.sleep(0.5)
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by pociagnal drzwi szafki do siebie"""
-	x_relative = 0.7
+	x_relative = 0.55
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi-0.2)	#obrot chwytaka
@@ -128,14 +134,14 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
 	"""Pociagniecie drzwiczek"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: pociagniecie drzwiczek"
-	rospy.sleep(0.5)
+	rospy.sleep(2.5)
 	
 	
 	"""Utworzenie macierzy jednorodnej dla chwytaka by wyswobodzil lape"""
 	x_relative = 0.45
-	y_relative = 0.4
+	y_relative = 0.5
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi+1.0)	#obrot chwytaka
@@ -143,7 +149,7 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by wyswobodzil lape"
 
 	"""Wyswobodzenie lapy"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: wyswobodzenie lapy"
 	rospy.sleep(0.5)
 	

@@ -13,7 +13,7 @@ from rcprg_ros_utils import exitError
 #-------------------------------------v-"CONSTANTS"-v----------------------------------------#
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
-move_time = 3.0 # czas ruchu
+move_time = 8.0 # stala czasowa (do przemnazania)
 
 # mapa stawow do modyfikacji
 q_map_changing = {'torso_0_joint':0,
@@ -74,6 +74,16 @@ def makeWrench(force, torque):
 	return PyKDL.Wrench(f, t)
 
 
+def countTime(T_B_Trd):
+	T_B_Current = velma.getTf("B", "Tr")
+	x_diff = T_B_Trd.p[0] - T_B_Current.p[0]
+	y_diff = T_B_Trd.p[1] - T_B_Current.p[1]
+	z_diff = T_B_Trd.p[2] - T_B_Current.p[2]
+	t = math.sqrt(math.pow(x_diff,2)+math.pow(y_diff,2)+math.pow(z_diff,2))
+	#print x_diff, y_diff, z_diff
+	print "TYLE trza przeleciec: ", t
+	return t
+
 #--------------------------------------------------------------------------------------------#
 #----------------------------------------v-MOVES-v-------------------------------------------#
 
@@ -90,7 +100,7 @@ def moveRightGripper(dest_q): # jnp
 def moveVelmaJoints(q_map): # jnp
 	global move_time
 	print "Moving to the position defined in q_map"
-	velma.moveJoint(q_map, move_time, start_time=0.01, position_tol=15.0/180.0*math.pi)
+	velma.moveJoint(q_map, move_time/1.6, start_time=0.01, position_tol=15.0/180.0*math.pi)
 	error = velma.waitForJoint()
 	if error != 0:
 		print "The action should have ended without error, but the error code is", error
@@ -104,8 +114,10 @@ def moveVelmaJoints(q_map): # jnp
 
 def moveCart(T_B_Trd): # cart
 	global move_time
+	t=countTime(T_B_Trd)
+	
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.01):
+	if not velma.moveCartImpRight([T_B_Trd], [move_time*t], None, None, None, None, makeWrench([5,5,5], [5,5,5]), start_time=0.01):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0:
 		exitError(14)
@@ -132,7 +144,7 @@ def settingImpedance(imp_list):
 	rospy.sleep(1.0)
 	"""
 
-def impedStearing(T_B_Trd,imp_list): # cart
+def impedStearing(T_B_Trd,imp_list,pt): # cart
 	global move_time
 	print "Rozpoczecie sterowania impendacyjnego---------------------------"
 
@@ -144,15 +156,17 @@ def impedStearing(T_B_Trd,imp_list): # cart
 	# stiffness, i.e. (1500,1500,1500,150,150,150)."
 
 	"""TEST WALNIECIA W SZAFKE"""
-	b=0.02 # tolerancja velocity (domyslne: none)
-
+	#pt=0.05 # tolerancja velocity (domyslne: none)
+	t=countTime(T_B_Trd)
+	
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [move_time], None, None, imp_list, [0.5], makeWrench([5,5,5], [5,5,5]), start_time=0.01, path_tol=PyKDL.Twist(PyKDL.Vector(b,b,b), PyKDL.Vector(b,b,b))):
+	if not velma.moveCartImpRight([T_B_Trd], [move_time*t], None, None, imp_list, [0.5], max_wrench=makeWrench([5,5,5], [5,5,5]),
+	start_time=0.01, path_tol=PyKDL.Twist(PyKDL.Vector(pt,pt,pt), PyKDL.Vector(pt,pt,pt))):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
-		print "Calculating difference between desiread and reached pose..."
+		#print "Calculating difference between desiread and reached pose..."
 		actual_gripper_position = velma.getTf("B", "Tr") #aktualna pozycja chwytaka
-		T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
+		#T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
 		#print T_B_T_diff
 		return actual_gripper_position.p[0] , actual_gripper_position.p[1], actual_gripper_position.p[2]
 	exitError("Pose reached, there was no collision") #jak sie nie zderzy z niczym to po co ktos ma uzyc impedStearing?
@@ -274,7 +288,7 @@ def initVelma():
 def initVelmaPosition():
 	global move_time
 	print "Moving to the starting position..."
-	velma.moveJoint(q_map_starting, move_time*2, start_time=0.01, position_tol=15.0/180.0*math.pi)
+	velma.moveJoint(q_map_starting, move_time, start_time=0.01, position_tol=15.0/180.0*math.pi)
 	error = velma.waitForJoint()
 	if error != 0:
 		print "The action should have ended without error, but the error code is", error
@@ -287,7 +301,7 @@ def initVelmaPosition():
 
 	print "moving head to position: 0"
 	q_dest = (0,0)
-	velma.moveHead(q_dest, move_time, start_time=0.01)
+	velma.moveHead(q_dest, move_time/2, start_time=0.01)
 	if velma.waitForHead() != 0:
 		exitError(4)
 	rospy.sleep(0.5)
