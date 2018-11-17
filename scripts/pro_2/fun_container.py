@@ -13,6 +13,7 @@ from rcprg_ros_utils import exitError
 #-------------------------------------v-"CONSTANTS"-v----------------------------------------#
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
+D2 = 0.07 #odleglosc gripper_jointa od klamki
 move_time = 8.0 # stala czasowa (do przemnazania)
 
 # mapa stawow do modyfikacji
@@ -83,6 +84,12 @@ def countTime(T_B_Trd):
 	#print x_diff, y_diff, z_diff
 	print "TYLE trza przeleciec: ", t
 	return t
+
+
+def getGripperXYfi():
+	T_B_Current = velma.getTf("B", "Gr")
+	[e1,e2,fi] = T_B_Current.M.GetRPY()
+	return T_B_Current.p[0], T_B_Current.p[1], fi
 
 #--------------------------------------------------------------------------------------------#
 #----------------------------------------v-MOVES-v-------------------------------------------#

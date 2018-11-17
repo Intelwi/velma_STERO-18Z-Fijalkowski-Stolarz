@@ -90,7 +90,7 @@ if __name__ == "__main__":
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05) #zwraca aktualne polozenie chwytaka
 	x_g_relative = (PyKDL.Rotation.RPY(0,0,-Y)*(PyKDL.Vector(x_g,y_g,z_g)-coords_cabinet)).x() # wzgledny wektor polozenia przy uderzeniu
-	#print x_g_relative
+	#print "x_g_relative:", x_g_relative
 	print "WYKONANO: test walniecia w szafke"
 	rospy.sleep(0.5)
 
@@ -125,6 +125,14 @@ if __name__ == "__main__":
 	rospy.sleep(0.5)
 
 
+	"""pobranie punktu nr 1"""
+	[x_p1, y_p1, fi] = getGripperXYfi()
+	tnafi = math.tan(abs(fi))
+	temp = D2/math.sqrt(1+tnafi*tnafi)
+	x_p1 = (abs(x_p1)+temp)*(abs(x_p1)/x_p1)
+	y_p1 = (abs(y_p1)+temp*tnafi)*(abs(y_p1)/y_p1)
+
+
 	"""Utworzenie macierzy jednorodnej dla chwytaka by pociagnal drzwi szafki do siebie"""
 	x_relative = 0.55
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
@@ -134,9 +142,23 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
 	"""Pociagniecie drzwiczek"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 	print "WYKONANO: pociagniecie drzwiczek"
-	rospy.sleep(2.5)
+	rospy.sleep(0.5)
+	
+	
+	"""pobranie punktu nr 2 i wyliczenie R"""
+	[x_p2, y_p2, fi] = getGripperXYfi()
+	tnafi = math.tan(fi)
+	temp = D2/math.sqrt(1+tnafi*tnafi)
+	x_p1 = (abs(x_p1)+temp)*(abs(x_p1)/x_p1)
+	y_p1 = (abs(y_p1)+temp*tnafi)*(abs(y_p1)/y_p1)
+	x_len = abs(x_p1-x_p2)
+	print x_len
+	y_len = abs(y_p1-y_p2)
+	print y_len
+	R = math.sqrt(x_len*x_len+y_len*y_len)*0.5/math.cos(math.atan(x_len/y_len))
+	print "Promien R =", R
 	
 	
 	"""Utworzenie macierzy jednorodnej dla chwytaka by wyswobodzil lape"""
@@ -149,7 +171,7 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by wyswobodzil lape"
 
 	"""Wyswobodzenie lapy"""
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 	print "WYKONANO: wyswobodzenie lapy"
 	rospy.sleep(0.5)
 	
