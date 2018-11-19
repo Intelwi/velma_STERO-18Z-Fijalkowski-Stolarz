@@ -153,7 +153,8 @@ if __name__ == "__main__":
 	x_relative = 0.55
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
-	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi-0.2)	#obrot chwytaka
+	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi-0.2)	#obrot chwytaka
+	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi)
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
@@ -237,20 +238,12 @@ if __name__ == "__main__":
 	p2_rel_coords = cab_rot.Inverse()*(p2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
 	p3_rel_coords = PyKDL.Vector(p2_rel_coords[0],p2_rel_coords[1],p2_rel_coords[2]) #wspolrzende kolejnego punktu okregu
 	#ruszaj dopoki nie osiagnie wspolrzednej y takiej jak srodek okregu
-	while p3_rel_coords[1] < center_rel_coords[1]:
+	angle = 0;
+	while angle<math.pi/2:
 	
-		p3_rel_coords[1] += 0.05 #nowa wspolrzedna y dla chwytaka
-		#sprawdzenie czy wartosci teoretycznie poprawane 
-		if R*R-(center_rel_coords[1]-p3_rel_coords[1])*(center_rel_coords[1]-p3_rel_coords[1]) < 0 :
-			print "R :", R
-			print "p3_rel_coords[1]", p3_rel_coords[1]
-			print "center_rel_coords[1]-p3_rel_coords[1]", (center_rel_coords[1]-p3_rel_coords[1])
-			print "Wynik", R*R-(center_rel_coords[1]-p3_rel_coords[1])*(center_rel_coords[1]-p3_rel_coords[1])
-			print "Wrong circle radius or goal point coordinates!--------------------------------------------------------------------"
-			break
-	
-
-		p3_rel_coords[0] = math.sqrt(R*R-(center_rel_coords[1]-p3_rel_coords[1])*(center_rel_coords[1]-p3_rel_coords[1])) #wyliczenie wspolrzednej x dla kolejnego punktu okregu
+		p3_rel_coords[0] = center_coords[0] + R*math.sin(angle)
+		p3_rel_coords[1] = center_coords[1] - R*math.cos(angle)
+		
 		print "Uklad szafki:"
 		print p3_rel_coords
 		final_vector = cab_rot*p3_rel_coords+coords_cabinet #wektor przemieszczenia dla chwytaka
@@ -258,6 +251,7 @@ if __name__ == "__main__":
 		print "KOLEJNY RUCH uklad robota"
 		print final_vector
 		[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
+		angle = angle+math.pi/20
 		rospy.sleep(0.3)
 
 	
