@@ -14,7 +14,7 @@ from rcprg_ros_utils import exitError
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
 D2 = 0.07 #odleglosc gripper_jointa od klamki
-move_time = 8.0 # stala czasowa (do przemnazania)
+move_time = 10.0 # stala czasowa (do przemnazania)
 
 # mapa stawow do modyfikacji
 q_map_changing = {'torso_0_joint':0,
