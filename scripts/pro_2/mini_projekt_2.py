@@ -63,7 +63,7 @@ if __name__ == "__main__":
 	
 	"""Utworzenie macierzy jednorodnej dla chwytaka - pozycja poczatkowa"""
 	x_relative = 0.5 
-	y_relative = 0.12
+	y_relative = 0.02
 	z_relative = 0.13
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by lekko cofnal reke"""
-	x_relative = x_g_relative - 0.05
+	x_relative = x_g_relative - 0.065
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
@@ -109,17 +109,17 @@ if __name__ == "__main__":
 	
 
 	"""Wyliczenie punktu do ktorego ma poruszyc reka zeby trafic w uchwyt (doswiadczalne y)"""
-	y_relative=-0.05 #doswiadczalne y tak by chwytak uderzyl w uchwyt
+	y_relative=-0.04 #doswiadczalne y tak by chwytak uderzyl w uchwyt
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative)
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka do uderzenia w uchwyt
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w uchwyt szafki"
 
 	"""Dojechanie do uchwytu"""
-	lk=800
+	lk=200
 	ak=50
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.028) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: dojechanie do uchwytu"
 	rospy.sleep(0.5)
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 	"""
 
 
-
+	rospy.sleep(1)
 	"""pobranie punktu nr 1"""
 	[x_p1, y_p1, fi] = getGripperXYfi()
 	tnafi = math.tan(abs(fi))
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by pociagnal drzwi szafki do siebie"""
-	x_relative = 0.55
+	x_relative = 0.6
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi-0.2)	#obrot chwytaka
@@ -159,24 +159,24 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
 	"""Pociagniecie drzwiczek"""
-	lk=800
+	lk=500
 	ak=50
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
-	[x_g2,y_g2,z_g]=impedStearing(T_B_Trd,imped,0.05)
-	rospy.sleep(0.5)
+	[x_g2,y_g2,z_g]=impedStearing(T_B_Trd,imped,0.07)
+	rospy.sleep(1)
 	
 
-
+	#ZA MALY PROMIEN BO 0.25!!!!!!!!!!!!!
 	"""pobranie punktu nr 2 i wyliczenie R"""
 	[x_p2, y_p2, fi] = getGripperXYfi()
 	print "PUNKT 2: ", x_p2, y_p2, "-----------------------------------------------------------","\n"
 	tnafi = math.tan(fi)
 	temp = D2/math.sqrt(1+tnafi*tnafi)
-	x_p1 = (abs(x_p1)+temp)*(abs(x_p1)/x_p1)
-	y_p1 = (abs(y_p1)+temp*tnafi)*(abs(y_p1)/y_p1)
-	x_len = abs(x_p1-x_p2)
+	x_p1_1 = (abs(x_p1)+temp)*(abs(x_p1)/x_p1)
+	y_p1_1 = (abs(y_p1)+temp*tnafi)*(abs(y_p1)/y_p1)
+	x_len = abs(x_p1_1-x_p2)
 	print x_len
-	y_len = abs(y_p1-y_p2)
+	y_len = abs(y_p1_1-y_p2)
 	print y_len
 	R = math.sqrt(x_len*x_len+y_len*y_len)*0.5/math.cos(math.atan(x_len/y_len))
 	print "Promien R =", R
@@ -217,6 +217,7 @@ if __name__ == "__main__":
 	#rospy.sleep(2.5)
 
 
+	rospy.sleep(2.5)
 	[xa,ya,z,theta,Y] = findObject("Tr")
 	"""Ustawienie reki do ruchu po okregu"""
 	p2_coords = PyKDL.Vector(xa,ya,final_vector[2]) #wspolrzedne punktu 2 wzgledem robota
@@ -226,19 +227,19 @@ if __name__ == "__main__":
 	T_B_Trd = PyKDL.Frame(gripper_rot, p2_coords) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 	print "Ustawienie reki do ruchu po okregu \n"
-	rospy.sleep(2.5)
+	rospy.sleep(1.5)
 
 
 	"""Poruszanie chwytakiem po polokregu"""
 
-	R=R+0.05 #eksperyment!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	 
 
 	p2_coords = PyKDL.Vector(xa,ya,final_vector[2]) #wspolrzedne punktu 2 wzgledem robota
 	p2_rel_coords = cab_rot.Inverse()*(p2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
 	p3_rel_coords = PyKDL.Vector(p2_rel_coords[0],p2_rel_coords[1],p2_rel_coords[2]) #wspolrzende kolejnego punktu okregu
 	#ruszaj dopoki nie osiagnie kata pi/2 takiej jak srodek okregu
-	angle = 0;
-	while angle<math.pi/2:
+	angle = math.pi/2; #DO TESTOW BO ZA MALY PROMIEn I I TAK NIE DZIALA!!!
+	while angle<=math.pi/2:
 	
 		p3_rel_coords[0] = center_rel_coords[0] + 0.3*math.sin(angle)
 		p3_rel_coords[1] = center_rel_coords[1] - 0.3*math.cos(angle)
@@ -251,7 +252,7 @@ if __name__ == "__main__":
 		print final_vector
 		[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 		angle = angle+math.pi/20
-		rospy.sleep(0.3)
+		rospy.sleep(0.7)
 
 	
 
