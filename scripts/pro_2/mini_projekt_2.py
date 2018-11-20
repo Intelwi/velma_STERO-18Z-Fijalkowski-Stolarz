@@ -85,8 +85,8 @@ if __name__ == "__main__":
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w szafke"
 
 	"""Walniecie w szafke"""
-	lk=100
-	ak=70
+	lk=400
+	ak=300
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
 	x_g_relative = (PyKDL.Rotation.RPY(0,0,-Y)*(PyKDL.Vector(x_g,y_g,z_g)-coords_cabinet)).x() # wzgledny wektor polozenia przy uderzeniu
@@ -109,15 +109,15 @@ if __name__ == "__main__":
 	
 
 	"""Wyliczenie punktu do ktorego ma poruszyc reka zeby trafic w uchwyt (doswiadczalne y)"""
-	y_relative=-0.04 #doswiadczalne y tak by chwytak uderzyl w uchwyt
+	y_relative=-0.03 #doswiadczalne y tak by chwytak uderzyl w uchwyt
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative)
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka do uderzenia w uchwyt
 	print "UTWORZONO: macierz jednorodna dla chwytaka by uderzyl w uchwyt szafki"
 
 	"""Dojechanie do uchwytu"""
-	lk=200
-	ak=50
+	lk=100
+	ak=300
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
 	print "WYKONANO: dojechanie do uchwytu"
@@ -147,29 +147,32 @@ if __name__ == "__main__":
 	y_p1 = (abs(y_p1)+temp*tnafi)*(abs(y_p1)/y_p1)
 	print "PUNKT 1: ", x_p1, y_p1, "-----------------------------------------------------------","\n"
 
+	
+	"""Pobranie pozycji nadgarstka"""
+	[x_g1,y_g1,z,theta,Y1] = findObject("Tr")
+	gripper_vector1 = PyKDL.Vector(x_g1, y_g1, z)
+	print "Pobranie pozycji nadgarstka"
 
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by pociagnal drzwi szafki do siebie"""
-	x_relative = 0.6
+	x_relative = 0.54
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
-	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi-0.2)	#obrot chwytaka
-	gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi)
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	print "UTWORZONO: macierz jednorodna dla chwytaka by pociagnal drzwi szafki"
 
 	"""Pociagniecie drzwiczek"""
-	lk=500
-	ak=50
-	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
+	lk=400
+	lk1=100
+	ak=300
+	imped = makeWrench([lk,lk1,lk],[ak,ak,ak]),
 	[x_g2,y_g2,z_g]=impedStearing(T_B_Trd,imped,0.07)
 	rospy.sleep(1)
 	
 
-	#ZA MALY PROMIEN BO 0.25!!!!!!!!!!!!!
 	"""pobranie punktu nr 2 i wyliczenie R"""
 	[x_p2, y_p2, fi] = getGripperXYfi()
-	print "PUNKT 2: ", x_p2, y_p2, "-----------------------------------------------------------","\n"
+	print "PUNKT 2: ", x_p2, y_p2, "-----------------------------------------------------------\n"
 	tnafi = math.tan(fi)
 	temp = D2/math.sqrt(1+tnafi*tnafi)
 	x_p1_1 = (abs(x_p1)+temp)*(abs(x_p1)/x_p1)
@@ -180,6 +183,7 @@ if __name__ == "__main__":
 	print y_len
 	R = math.sqrt(x_len*x_len+y_len*y_len)*0.5/math.cos(math.atan(x_len/y_len))
 	print "Promien R =", R
+	R=R*2
 	
 	
 
@@ -208,6 +212,9 @@ if __name__ == "__main__":
 	#p1_rel_coords - vector dla 1 punktu okregu wzgledem szafki
 	#center_rel_coords - wspolrzedne srodka okregu wzgledem szafki
 
+	p2_coords = PyKDL.Vector(x_p2,y_p2,final_vector[2]) #wspolrzedne punktu 2 wzgledem robota
+	p2_rel_coords = cab_rot.Inverse()*(p2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
+
 	p1_coords = PyKDL.Vector(x_p1,y_p1,z_g)
 	p1_rel_coords = cab_rot.Inverse()*(p1_coords-coords_cabinet)
 	center_rel_coords = PyKDL.Vector(p1_rel_coords[0], p1_rel_coords[1]+R, p1_rel_coords[2]) #wspolrzedne x srdoka okregu wzgledem szafki
@@ -217,46 +224,61 @@ if __name__ == "__main__":
 	#rospy.sleep(2.5)
 
 
+	"""Przeskalowanie promienia dla robota"""
+	x = x_g1-p1_coords[0]
+	y = y_p1-center_coords[1]
+	R1 = math.sqrt(x*x+y*y)
+	print "Przeskalowanie promienia do ruchu"
+
+
 	rospy.sleep(2.5)
-	[xa,ya,z,theta,Y] = findObject("Tr")
+	[x_g2,y_g2,z,theta,Y1] = findObject("Tr")
 	"""Ustawienie reki do ruchu po okregu"""
-	p2_coords = PyKDL.Vector(xa,ya,final_vector[2]) #wspolrzedne punktu 2 wzgledem robota
-	#p2_rel_coords = cab_rot.Inverse()*(p2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
-	#p2_rel_coords[0] = p2_rel_coords[0] +0.15
-	#p2_coords = cab_rot*p2_rel_coords+coords_cabinet #wektor przemieszczenia dla chwytaka
-	T_B_Trd = PyKDL.Frame(gripper_rot, p2_coords) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+	g2_coords = PyKDL.Vector(x_g2,y_g2,final_vector[2]) #wspolrzedne punktu 2 (ale nadgarstka) wzgledem robota
+	"""Wyliczenie startowego kata do ruchu narzedzia"""
+	x = abs(p2_rel_coords[0]-p1_rel_coords[0])
+	alpha = math.asin(x/R1)
+	print "Wyliczenie startowego kata do ruchu:",alpha+Y-math.pi,"alpha:",alpha
+	gripper_rot1 = PyKDL.Rotation.RPY(0,0,alpha+Y-math.pi) #obrot chwytaka
+	T_B_Trd = PyKDL.Frame(gripper_rot1, g2_coords) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
-	print "Ustawienie reki do ruchu po okregu \n"
-	rospy.sleep(1.5)
+	print "Ustawienie reki do ruchu po okregu----------------------------------------------------------------------- \n \n"
+	rospy.sleep(3)
 
 
+	"""Wylicznie kata do ruchu po nadgarstka wzgledemkata do ruchu narzedzia""",
+	beta = math.asin(0.27/R1)
+	gamma = 0
 	"""Poruszanie chwytakiem po polokregu"""
+	g2_rel_coords = cab_rot.Inverse()*(g2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
+	p3_rel_coords = PyKDL.Vector(g2_rel_coords[0],g2_rel_coords[1],g2_rel_coords[2]) #wspolrzende kolejnego punktu okregu
+	"""Ustawienie impedancji"""
+	lk=400
+	ak=300
+	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
 
-	 
 
-	p2_coords = PyKDL.Vector(xa,ya,final_vector[2]) #wspolrzedne punktu 2 wzgledem robota
-	p2_rel_coords = cab_rot.Inverse()*(p2_coords-coords_cabinet) #wspolrzedne punktu 2 wzgledem szafki
-	p3_rel_coords = PyKDL.Vector(p2_rel_coords[0],p2_rel_coords[1],p2_rel_coords[2]) #wspolrzende kolejnego punktu okregu
 	#ruszaj dopoki nie osiagnie kata pi/2 takiej jak srodek okregu
-	angle = math.pi/2; #DO TESTOW BO ZA MALY PROMIEn I I TAK NIE DZIALA!!!
-	while angle<=math.pi/2:
-	
-		p3_rel_coords[0] = center_rel_coords[0] + 0.3*math.sin(angle)
-		p3_rel_coords[1] = center_rel_coords[1] - 0.3*math.cos(angle)
+	while alpha<=math.pi/2:
+		alpha=alpha+math.pi/20
+		gamma = beta+alpha
+		p3_rel_coords[0] = center_rel_coords[0] + R1*math.sin(gamma)
+		p3_rel_coords[1] = center_rel_coords[1] - R1*math.cos(gamma)
 		
 		print "Uklad szafki:"
 		print p3_rel_coords
 		final_vector = cab_rot*p3_rel_coords+coords_cabinet #wektor przemieszczenia dla chwytaka
-		T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
+		gripper_rot2 = PyKDL.Rotation.RPY(0,0,alpha+Y-math.pi) #obrot szafki
+		T_B_Trd = PyKDL.Frame(gripper_rot2, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 		print "KOLEJNY RUCH uklad robota"
 		print final_vector
 		[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
-		angle = angle+math.pi/20
+		
 		rospy.sleep(0.7)
 
 	
 
-	"""Utworzenie macierzy jednorodnej dla chwytaka by wyswobodzil lape"""
+	"""Utworzenie macierzy jednorodnej dla chwytaka by wyswobodzil lape
 	#x_relative = 0.45
 	#y_relative = 0.5
 	x_relative = p3_rel_coords[0]
@@ -266,12 +288,12 @@ if __name__ == "__main__":
 	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi+1.0)	#obrot chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	print "UTWORZONO: macierz jednorodna dla chwytaka by wyswobodzil lape"
-
-	"""Wyswobodzenie lapy"""
+"""
+	"""Wyswobodzenie lapy
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 	print "WYKONANO: wyswobodzenie lapy"
 	rospy.sleep(0.5)
-	
+"""	
 
 	"""Przejscie do trybu jnp_imp"""
 	toJnp()

@@ -153,7 +153,7 @@ def impedStearing(T_B_Trd,imp_list,pt): # cart
 	t=countTime(T_B_Trd)
 	actual_gripper_position = velma.getTf("B", "Tr") #aktualna pozycja chwytaka
 	print "Moving right wrist to pose defined in world frame..."
-	if not velma.moveCartImpRight([T_B_Trd], [move_time*t], None, None, imp_list, [0.5], max_wrench=makeWrench([5,5,5], [5,5,5]),
+	if not velma.moveCartImpRight([T_B_Trd], [3], None, None, imp_list, [0.5], max_wrench=makeWrench([5,5,5], [5,5,5]),
 	start_time=0.01, path_tol=PyKDL.Twist(PyKDL.Vector(pt,pt,pt), PyKDL.Vector(pt,pt,pt))):
 		exitError(13)
 	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
