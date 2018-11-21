@@ -13,7 +13,7 @@ from rcprg_ros_utils import exitError
 #-------------------------------------v-"CONSTANTS"-v----------------------------------------#
 
 D1 = 0.5 #odleglosc ustawienia chwytaka od szafki
-D2 = 0.07 #odleglosc gripper_jointa od klamki
+D2 = 0.085 #odleglosc gripper_jointa od klamki
 move_time = 10.0 # stala czasowa (do przemnazania)
 
 # mapa stawow do modyfikacji
@@ -83,7 +83,10 @@ def countTime(T_B_Trd):
 	t = math.sqrt(math.pow(x_diff,2)+math.pow(y_diff,2)+math.pow(z_diff,2))
 	#print x_diff, y_diff, z_diff
 	print "TYLE trza przeleciec: ", t
-	return t
+	if (t < 0.7):
+		return 0.7
+	else:
+		return t
 
 
 def getGripperXYfi():
