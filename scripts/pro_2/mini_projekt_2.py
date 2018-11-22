@@ -12,6 +12,7 @@ from rcprg_ros_utils import exitError
 from fun_container import *
 
 
+
 if __name__ == "__main__":
 	global x,y,z,theta,Y
 	"""Uruchomienie interfejsu Velmy i sprawdzenie silnikow"""
@@ -212,14 +213,12 @@ if __name__ == "__main__":
 		[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 		
 
-	
 
 	"""Utworzenie macierzy jednorodnej dla chwytaka by wyswobodzil lape"""
 	x_relative = p3_rel_coords[0]-0.08
 	y_relative = p3_rel_coords[1]
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative) #wektor poczatkowy
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
-	#gripper_rot = PyKDL.Rotation.RPY(0,0,Y-math.pi+1.0)	#obrot chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot1, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 	print "UTWORZONO: macierz jednorodna dla chwytaka by wyswobodzil lape"
 

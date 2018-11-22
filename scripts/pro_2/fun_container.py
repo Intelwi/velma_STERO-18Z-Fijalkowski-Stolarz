@@ -81,7 +81,6 @@ def countTime(T_B_Trd):
 	y_diff = T_B_Trd.p[1] - T_B_Current.p[1]
 	z_diff = T_B_Trd.p[2] - T_B_Current.p[2]
 	t = math.sqrt(math.pow(x_diff,2)+math.pow(y_diff,2)+math.pow(z_diff,2))
-	#print x_diff, y_diff, z_diff
 	print "TYLE trza przeleciec: ", t
 	return t
 
@@ -132,7 +131,6 @@ def moveCart(T_B_Trd): # cart
 	
 	print "Calculating difference between desiread and reached pose..."
 	T_B_T_diff = PyKDL.diff(T_B_Trd, velma.getTf("B", "Tr"), 1.0)
-	#print T_B_T_diff
 	if T_B_T_diff.vel.Norm() > 0.05 or T_B_T_diff.rot.Norm() > 0.05:
 		exitError(15)
 		
@@ -149,7 +147,6 @@ def impedStearing(T_B_Trd,imp_list,pt): # cart
 	# stiffness, i.e. (1500,1500,1500,150,150,150)."
 
 	"""TEST WALNIECIA W SZAFKE"""
-	#pt=0.05 # tolerancja velocity (domyslne: none)
 	t=countTime(T_B_Trd)
 	actual_gripper_position = velma.getTf("B", "Tr") #aktualna pozycja chwytaka
 	print "Moving right wrist to pose defined in world frame..."
@@ -160,9 +157,6 @@ def impedStearing(T_B_Trd,imp_list,pt): # cart
 		exitError(13)
 
 	if velma.waitForEffectorRight() != 0: #zglaszane jak chwytak nie moze osiagnac zadanej pozycji
-		#print "Calculating difference between desiread and reached pose..."
-		#T_B_T_diff = PyKDL.diff(T_B_Trd, actual_gripper_position, 1.0) #liczenie roznicy w sumie nie potrzebne chyba
-		#print T_B_T_diff
 		return actual_gripper_position.p[0] , actual_gripper_position.p[1], actual_gripper_position.p[2]
 	print "Pose reached, there was no collision"
 	return actual_gripper_position.p[0] , actual_gripper_position.p[1], actual_gripper_position.p[2]
