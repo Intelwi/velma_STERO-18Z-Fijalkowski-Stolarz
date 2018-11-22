@@ -118,7 +118,7 @@ if __name__ == "__main__":
 	
 
 	"""Wyliczenie punktu do ktorego ma poruszyc reka zeby trafic w uchwyt (doswiadczalne y)"""
-	y_relative=-0.03 #doswiadczalne y tak by chwytak uderzyl w uchwyt 0.03
+	y_relative=-0.05 #doswiadczalne y tak by chwytak uderzyl w uchwyt -0.03
 	init_vector = PyKDL.Vector(x_relative, y_relative, z_relative)
 	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
 	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka do uderzenia w uchwyt
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 	lk=100
 	ak=300
 	imped = makeWrench([lk,lk,lk],[ak,ak,ak]),
-	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1) #zwraca aktualne polozenie chwytaka
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.03) #zwraca aktualne polozenie chwytaka 0.1
 	print "WYKONANO: dojechanie do uchwytu"
 	rospy.sleep(0.5)
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 	rel_coords_right_door = cab_rot.Inverse()*(coords_right_door-coords_cabinet) #wspolrzedne zawiasow szafki
 	R = math.sqrt(rel_coords_right_door[0]*rel_coords_right_door[0]+rel_coords_right_door[1]*rel_coords_right_door[1])
 	print "Wyliczono promien: ",R,"\n"
-	print rel_coords_right_door, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!@@@@@@@@@@@@@@1!!!!!!!!!2@!!!!!!!"
+	print rel_coords_right_door, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
 
 	"""Wyliczenie srodka okregu"""
@@ -208,19 +208,19 @@ if __name__ == "__main__":
 	p1_rel_coords = cab_rot.Inverse()*(p1_coords-coords_cabinet) #to co powyzej tylko wzgledem szafki
 	center_rel_coords = rel_coords_right_door #przepisalem bo tak bylo latwiej
 	#center_rel_coords = PyKDL.Vector(p1_rel_coords[0], p1_rel_coords[1]+R, p1_rel_coords[2]) #wspolrzedne x srdoka okregu wzgledem szafki
-	print "srodek okregu uklad szafki", center_rel_coords
+	#print "srodek okregu uklad szafki", center_rel_coords
 	center_coords = coords_right_door #przepisalem bo tak bylo latwiej
 	#center_coords = cab_rot*center_rel_coords+coords_cabinet #wspolrzedne srodka okregu wzgledem robota
-	print "Srodek okregu uklad robota:", center_coords
-	print "Szafka:",coords_cabinet
+	#print "Srodek okregu uklad robota:", center_coords
+	#print "Szafka:",coords_cabinet
 	#rospy.sleep(2.5)
 
 
 	"""Przeskalowanie promienia dla robota dla nadgarstka (bo jest inny dla narzedzia)"""
 	x = gripper_rel_vector1[0]-p1_rel_coords[0]
 	y = p1_rel_coords[1]-center_rel_coords[1]
-	R1 = math.sqrt(x*x+y*y) #R1 jest uzywany do rownania parametrycznego okregu po jakim porusza sie nadgarstek
-	print "Przeskalowanie promienia do ruchu: ", R1
+	R1 = math.sqrt(x*x+R*R) #R1 jest uzywany do rownania parametrycznego okregu po jakim porusza sie nadgarstek
+	print "\nPrzeskalowanie promienia do ruchu (R1): ", R1, "\n"
 
 
 	#rospy.sleep(2.5)
@@ -274,13 +274,13 @@ if __name__ == "__main__":
 		p3_rel_coords[0] = center_rel_coords[0] + R1*math.sin(gamma)
 		p3_rel_coords[1] = center_rel_coords[1] - R1*math.cos(gamma)
 		
-		print "Uklad szafki:"
-		print p3_rel_coords
+		#print "Uklad szafki:"
+		#print p3_rel_coords
 		final_vector = cab_rot*p3_rel_coords+coords_cabinet #przerobienie pozycji nadgarstka na pozycje wzgledem robota
 		gripper_rot1 = PyKDL.Rotation.RPY(0,0,alpha+Y-math.pi) #obrot nadgarstka
 		T_B_Trd = PyKDL.Frame(gripper_rot1, final_vector) #tworzenie macierzy jednorodnej do ustawienia chwytaka
 		print "KOLEJNY RUCH uklad robota"
-		print final_vector
+		#print final_vector
 		[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.05)
 		
 
@@ -305,6 +305,14 @@ if __name__ == "__main__":
 	"""Wyswobodzenie lapy"""
 	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1)
 	print "WYKONANO: wyswobodzenie lapy"
+	rospy.sleep(0.5)
+
+	"""Wyswobodzenie przez obrocenie lapy"""
+	init_vector = PyKDL.Vector(x_relative+0.4, y_relative-0.05, z_relative) #wektor poczatkowy
+	final_vector = cab_rot*init_vector+coords_cabinet #wektor przemieszczenia dla chwytaka
+	T_B_Trd = PyKDL.Frame(gripper_rot, final_vector)
+	[x_g,y_g,z_g]=impedStearing(T_B_Trd,imped,0.1)
+	print "WYKONANO: obrocenie lapy"
 	rospy.sleep(0.5)
 
 
